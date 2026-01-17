@@ -28,7 +28,7 @@ MVP delivers:
 | ID | Description | Files/Modules | Acceptance Criteria | Status |
 |----|-------------|---------------|---------------------|--------|
 | P1-01 | Initialize Python project with pyproject.toml, dependencies | `pyproject.toml`, `requirements.txt` | Poetry/pip install works, Python 3.11+ | [x] |
-| P1-02 | Initialize Electron app scaffold | `electron/`, `package.json` | `npm start` launches empty Electron window | [ ] |
+| P1-02 | Initialize Electron app scaffold | `electron/`, `package.json` | `npm start` launches empty Electron window | [x] |
 | P1-03 | Set up Python-Electron IPC bridge | `src/ipc/`, `electron/preload.js` | Electron can call Python functions and receive responses | [ ] |
 | P1-04 | Create SQLite schema and migrations | `src/db/schema.sql`, `src/db/migrations/` | All tables from PRD created, migrations versioned | [ ] |
 | P1-05 | Implement sqlite-vec integration | `src/db/vectors.py` | Can store and query 1536-dim embeddings | [ ] |
