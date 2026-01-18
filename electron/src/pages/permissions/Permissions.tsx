@@ -120,7 +120,8 @@ function Permissions() {
   const [error, setError] = useState<string | null>(null);
   const [pythonReady, setPythonReady] = useState(false);
   const [isActivelyWaiting, setIsActivelyWaiting] = useState(false);
-  const [lastCheckTime, setLastCheckTime] = useState<number>(0);
+  // Track last check time for potential future use (value currently unused)
+  const [, setLastCheckTime] = useState<number>(0);
 
   const checkPermissions = useCallback(async (silent = false) => {
     if (!window.traceAPI?.permissions) return;

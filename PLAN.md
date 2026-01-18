@@ -112,15 +112,15 @@ MVP delivers:
 
 | ID | Description | Files/Modules | Acceptance Criteria | Status |
 |----|-------------|---------------|---------------------|--------|
-| P8-01 | Electron main process setup | `electron/main.js` | Launches Python backend, manages lifecycle | [ ] |
-| P8-02 | React app scaffold | `electron/src/` | Basic React app with routing | [ ] |
-| P8-03 | Chat input component | `electron/src/components/ChatInput.tsx` | Text input with submit | [ ] |
-| P8-04 | Time filter component | `electron/src/components/TimeFilter.tsx` | Date picker, quick presets (today, this week, etc.) | [ ] |
-| P8-05 | Results list component | `electron/src/components/Results.tsx` | Shows relevant notes with timestamps | [ ] |
-| P8-06 | Note viewer component | `electron/src/components/NoteViewer.tsx` | Opens and displays Markdown note files | [ ] |
-| P8-07 | Answer display component | `electron/src/components/Answer.tsx` | Shows synthesized answer with citations | [ ] |
-| P8-08 | System tray integration | `electron/main.js` | Menu bar icon, quick access, status indicator | [ ] |
-| P8-09 | Settings UI | `electron/src/pages/Settings.tsx` | LLM API key config, data directory path | [ ] |
+| P8-01 | Electron main process setup | `electron/main.js` | Launches Python backend, manages lifecycle | [x] |
+| P8-02 | React app scaffold | `electron/src/` | Basic React app with routing | [x] |
+| P8-03 | Chat input component | `electron/src/components/ChatInput.tsx` | Text input with submit | [x] |
+| P8-04 | Time filter component | `electron/src/components/TimeFilter.tsx` | Date picker, quick presets (today, this week, etc.) | [x] |
+| P8-05 | Results list component | `electron/src/components/Results.tsx` | Shows relevant notes with timestamps | [x] |
+| P8-06 | Note viewer component | `electron/src/components/NoteViewer.tsx` | Opens and displays Markdown note files | [x] |
+| P8-07 | Answer display component | `electron/src/components/Answer.tsx` | Shows synthesized answer with citations | [x] |
+| P8-08 | System tray integration | `electron/main.js` | Menu bar icon, quick access, status indicator | [x] |
+| P8-09 | Settings UI | `electron/src/pages/Settings.tsx` | LLM API key config, data directory path | [x] |
 
 ### Phase 9: Integration & Polish
 

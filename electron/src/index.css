@@ -51,3 +51,43 @@ body {
     transform: scale(0.8);
   }
 }
+
+/* Spinner animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #505050;
+}
+
+/* Button hover states */
+button:not(:disabled):hover {
+  filter: brightness(1.1);
+}
+
+/* Input focus states */
+input:focus,
+textarea:focus {
+  border-color: var(--accent) !important;
+}

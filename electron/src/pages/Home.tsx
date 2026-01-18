@@ -49,6 +49,9 @@ function Home() {
           // Redirect to permissions page if not all granted
           if (!permissions.all_granted) {
             navigate('/permissions');
+          } else {
+            // Permissions granted - go to chat
+            navigate('/chat');
           }
         }
       } catch (err) {

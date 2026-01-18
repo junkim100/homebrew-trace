@@ -48,4 +48,54 @@ contextBridge.exposeInMainWorld('traceAPI', {
     requestLocation: () =>
       ipcRenderer.invoke('python:call', 'permissions.request_location', {}),
   },
+
+  // Chat methods
+  chat: {
+    // Send a query and get a response with answer, citations, notes
+    query: (query, options = {}) =>
+      ipcRenderer.invoke('python:call', 'chat.query', {
+        query,
+        time_filter: options.timeFilter,
+        include_graph_expansion: options.includeGraphExpansion ?? true,
+        include_aggregates: options.includeAggregates ?? true,
+        max_results: options.maxResults ?? 10,
+      }),
+  },
+
+  // Notes methods
+  notes: {
+    // Read a specific note by ID
+    read: (noteId) =>
+      ipcRenderer.invoke('python:call', 'notes.read', { note_id: noteId }),
+
+    // List available notes
+    list: (options = {}) =>
+      ipcRenderer.invoke('python:call', 'notes.list', {
+        start_date: options.startDate,
+        end_date: options.endDate,
+        limit: options.limit ?? 50,
+      }),
+  },
+
+  // Settings methods
+  settings: {
+    // Get current settings
+    get: () => ipcRenderer.invoke('python:call', 'settings.get', {}),
+
+    // Set API key
+    setApiKey: (apiKey) =>
+      ipcRenderer.invoke('python:call', 'settings.set_api_key', { api_key: apiKey }),
+  },
+
+  // Window control methods
+  window: {
+    // Minimize window
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+
+    // Maximize window
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+
+    // Close window
+    close: () => ipcRenderer.invoke('window:close'),
+  },
 });

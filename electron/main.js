@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const readline = require('readline');
@@ -8,6 +8,7 @@ let pythonProcess = null;
 let pythonReady = false;
 let pendingRequests = new Map(); // id -> { resolve, reject, timeout }
 let requestId = 0;
+let tray = null;
 
 // Get the path to the Python executable
 function getPythonPath() {
@@ -47,6 +48,7 @@ function startPythonBackend() {
       if (message.type === 'ready') {
         pythonReady = true;
         console.log(`Python backend ready (version ${message.version})`);
+        updateTrayMenu();
         return;
       }
 
@@ -177,6 +179,9 @@ app.whenReady().then(() => {
   // Start Python backend before creating window
   startPythonBackend();
 
+  // Create system tray
+  createTray();
+
   createWindow();
 
   app.on('activate', () => {
@@ -221,3 +226,153 @@ ipcMain.handle('python:ready', async () => {
 ipcMain.handle('python:call', async (event, method, params) => {
   return callPython(method, params);
 });
+
+// Window control handlers
+ipcMain.handle('window:minimize', () => {
+  if (mainWindow) mainWindow.minimize();
+});
+
+ipcMain.handle('window:maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+ipcMain.handle('window:close', () => {
+  if (mainWindow) mainWindow.close();
+});
+
+// Create system tray
+function createTray() {
+  // Create a simple tray icon (16x16 template image for macOS)
+  // For production, use actual icon files
+  const icon = nativeImage.createEmpty();
+
+  // On macOS, use a template image for proper appearance in both light/dark mode
+  // For now, create a simple filled circle icon programmatically
+  const size = 16;
+  const canvas = Buffer.alloc(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = x - size / 2;
+      const dy = y - size / 2;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const idx = (y * size + x) * 4;
+      if (dist < size / 2 - 2) {
+        // Inside the circle - white with some transparency
+        canvas[idx] = 255;     // R
+        canvas[idx + 1] = 255; // G
+        canvas[idx + 2] = 255; // B
+        canvas[idx + 3] = 200; // A
+      } else if (dist < size / 2) {
+        // Edge - anti-aliased
+        const alpha = Math.max(0, (size / 2 - dist) / 2) * 255;
+        canvas[idx] = 255;
+        canvas[idx + 1] = 255;
+        canvas[idx + 2] = 255;
+        canvas[idx + 3] = Math.floor(alpha);
+      } else {
+        // Outside - transparent
+        canvas[idx] = 0;
+        canvas[idx + 1] = 0;
+        canvas[idx + 2] = 0;
+        canvas[idx + 3] = 0;
+      }
+    }
+  }
+
+  const trayIcon = nativeImage.createFromBuffer(canvas, { width: size, height: size });
+  trayIcon.setTemplateImage(true); // For macOS menu bar
+
+  tray = new Tray(trayIcon);
+  tray.setToolTip('Trace - Digital Activity Tracker');
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Show Trace',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        } else {
+          createWindow();
+        }
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: 'Backend Status',
+      sublabel: pythonReady ? 'Running' : 'Starting...',
+      enabled: false
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: 'Quit Trace',
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setContextMenu(contextMenu);
+
+  // Click on tray icon shows/hides window
+  tray.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    } else {
+      createWindow();
+    }
+  });
+}
+
+// Update tray menu when backend status changes
+function updateTrayMenu() {
+  if (!tray) return;
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Show Trace',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        } else {
+          createWindow();
+        }
+      }
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: 'Backend Status',
+      sublabel: pythonReady ? 'Running' : 'Starting...',
+      enabled: false
+    },
+    {
+      type: 'separator'
+    },
+    {
+      label: 'Quit Trace',
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setContextMenu(contextMenu);
+}
