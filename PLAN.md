@@ -71,16 +71,16 @@ MVP delivers:
 
 | ID | Description | Files/Modules | Acceptance Criteria | Status |
 |----|-------------|---------------|---------------------|--------|
-| P5-01 | Frame triage with gpt-5-nano | `src/summarize/triage.py` | Classifies screenshots, scores importance for keyframe selection | [ ] |
-| P5-02 | Keyframe selection algorithm | `src/summarize/keyframes.py` | Selects representative frames (transitions, high-diff, anchors) | [ ] |
-| P5-03 | Evidence aggregation for hour | `src/summarize/evidence.py` | Builds timeline, selects text snippets within token budget | [ ] |
-| P5-04 | Hourly summarization prompt | `src/summarize/prompts/hourly.py` | Structured prompt with schema for gpt-5-mini | [ ] |
-| P5-05 | JSON schema validation | `src/summarize/schemas.py` | Validates LLM output against versioned schema, retries once | [ ] |
-| P5-06 | Markdown note renderer | `src/summarize/render.py` | Converts validated JSON to Markdown with YAML frontmatter | [ ] |
-| P5-07 | Entity extraction and storage | `src/summarize/entities.py` | Extracts entities from JSON, normalizes, stores in DB | [ ] |
-| P5-08 | Embedding computation | `src/summarize/embeddings.py` | Computes embeddings for note, stores via sqlite-vec | [ ] |
-| P5-09 | Hourly job scheduler | `src/jobs/hourly.py` | APScheduler job runs every hour, creates pending jobs | [ ] |
-| P5-10 | Hourly job executor | `src/jobs/hourly.py` | Executes hourly summarization, updates job status | [ ] |
+| P5-01 | Frame triage with gpt-5-nano | `src/summarize/triage.py` | Classifies screenshots, scores importance for keyframe selection | [x] |
+| P5-02 | Keyframe selection algorithm | `src/summarize/keyframes.py` | Selects representative frames (transitions, high-diff, anchors) | [x] |
+| P5-03 | Evidence aggregation for hour | `src/summarize/evidence.py` | Builds timeline, selects text snippets within token budget | [x] |
+| P5-04 | Hourly summarization prompt | `src/summarize/prompts/hourly.py` | Structured prompt with schema for gpt-5-mini | [x] |
+| P5-05 | JSON schema validation | `src/summarize/schemas.py` | Validates LLM output against versioned schema, retries once | [x] |
+| P5-06 | Markdown note renderer | `src/summarize/render.py` | Converts validated JSON to Markdown with YAML frontmatter | [x] |
+| P5-07 | Entity extraction and storage | `src/summarize/entities.py` | Extracts entities from JSON, normalizes, stores in DB | [x] |
+| P5-08 | Embedding computation | `src/summarize/embeddings.py` | Computes embeddings for note, stores via sqlite-vec | [x] |
+| P5-09 | Hourly job scheduler | `src/jobs/hourly.py` | APScheduler job runs every hour, creates pending jobs | [x] |
+| P5-10 | Hourly job executor | `src/jobs/hourly.py` | Executes hourly summarization, updates job status | [x] |
 
 ### Phase 6: Daily Revision & Graph
 
