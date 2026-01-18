@@ -18,7 +18,7 @@ MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 DEFAULT_DB_PATH = DB_PATH
 
 
-def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
+def get_connection(db_path: Path | str | None = None) -> sqlite3.Connection:
     """
     Get a connection to the SQLite database.
 
@@ -30,6 +30,8 @@ def get_connection(db_path: Path | None = None) -> sqlite3.Connection:
     """
     if db_path is None:
         db_path = DEFAULT_DB_PATH
+    elif isinstance(db_path, str):
+        db_path = Path(db_path)
 
     db_path.parent.mkdir(parents=True, exist_ok=True)
 

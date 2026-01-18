@@ -236,9 +236,9 @@ def _get_display_at_point(x: float, y: float) -> int | None:
         from Quartz import CGDisplayBounds, CGGetActiveDisplayList
 
         max_displays = 16
-        active_displays, count = CGGetActiveDisplayList(max_displays, None, None)
+        error, active_displays, count = CGGetActiveDisplayList(max_displays, None, None)
 
-        if count == 0:
+        if error != 0 or count == 0:
             return None
 
         for i in range(count):

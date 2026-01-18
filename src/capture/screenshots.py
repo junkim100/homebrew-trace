@@ -64,7 +64,11 @@ def _get_monitors_macos() -> list[MonitorInfo]:
         )
 
         max_displays = 16
-        active_displays, count = CGGetActiveDisplayList(max_displays, None, None)
+        error, active_displays, count = CGGetActiveDisplayList(max_displays, None, None)
+
+        if error != 0:
+            logger.error(f"CGGetActiveDisplayList returned error: {error}")
+            return []
 
         if count == 0:
             logger.warning("No displays found")
@@ -103,7 +107,14 @@ def _capture_display_macos(display_id: int) -> Image.Image | None:
         return None
 
     try:
-        from Quartz import CGDisplayCreateImage
+        from Quartz import (
+            CGDataProviderCopyData,
+            CGDisplayCreateImage,
+            CGImageGetBytesPerRow,
+            CGImageGetDataProvider,
+            CGImageGetHeight,
+            CGImageGetWidth,
+        )
 
         # Capture the display
         cg_image = CGDisplayCreateImage(display_id)
@@ -111,14 +122,12 @@ def _capture_display_macos(display_id: int) -> Image.Image | None:
             logger.warning(f"Failed to capture display {display_id}")
             return None
 
-        # Get image dimensions
-        width = cg_image.width
-        height = cg_image.height
-        bytes_per_row = cg_image.bytesPerRow
+        # Get image dimensions using functions
+        width = CGImageGetWidth(cg_image)
+        height = CGImageGetHeight(cg_image)
+        bytes_per_row = CGImageGetBytesPerRow(cg_image)
 
         # Get raw pixel data
-        from Quartz import CGDataProviderCopyData, CGImageGetDataProvider
-
         provider = CGImageGetDataProvider(cg_image)
         data = CGDataProviderCopyData(provider)
 
