@@ -78,7 +78,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/trace_app", "src/core", "src/db", "src/platform"]
+packages = ["src/trace_app", "src/core", "src/db", "src/platform", "src/capture"]
 
 [tool.ruff]
 target-version = "py311"
@@ -99,7 +99,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["trace_app"]
+known-first-party = ["trace_app", "src"]
 
 [tool.mypy]
 python_version = "3.11"

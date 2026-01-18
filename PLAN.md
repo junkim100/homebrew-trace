@@ -46,16 +46,16 @@ MVP delivers:
 
 | ID | Description | Files/Modules | Acceptance Criteria | Status |
 |----|-------------|---------------|---------------------|--------|
-| P3-01 | Multi-monitor screenshot capture | `src/capture/screenshots.py` | Captures all monitors every 1s, downscales to ≤1080p | [ ] |
-| P3-02 | Screenshot deduplication | `src/capture/dedup.py` | Computes perceptual hash, skips storing if diff < threshold | [ ] |
-| P3-03 | Foreground app/window metadata capture | `src/capture/foreground.py` | Captures bundle ID, app name, window title, monitor ID | [ ] |
-| P3-04 | Event span tracking | `src/capture/events.py` | Creates/updates event spans on app/window transitions | [ ] |
-| P3-05 | Now playing capture (Spotify) | `src/capture/now_playing.py` | Captures track, artist, album from Spotify via AppleScript | [ ] |
-| P3-06 | Now playing capture (Apple Music) | `src/capture/now_playing.py` | Captures track, artist, album from Music.app | [ ] |
-| P3-07 | Location capture | `src/capture/location.py` | Captures OS location snapshots with timestamps | [ ] |
-| P3-08 | Safari URL capture | `src/capture/urls.py` | Gets current URL/title from Safari via AppleScript | [ ] |
-| P3-09 | Chrome URL capture | `src/capture/urls.py` | Gets current URL/title from Chrome via CDP or AppleScript | [ ] |
-| P3-10 | Capture daemon orchestrator | `src/capture/daemon.py` | Coordinates all capture at 1s intervals, writes to SQLite | [ ] |
+| P3-01 | Multi-monitor screenshot capture | `src/capture/screenshots.py` | Captures all monitors every 1s, downscales to ≤1080p | [x] |
+| P3-02 | Screenshot deduplication | `src/capture/dedup.py` | Computes perceptual hash, skips storing if diff < threshold | [x] |
+| P3-03 | Foreground app/window metadata capture | `src/capture/foreground.py` | Captures bundle ID, app name, window title, monitor ID | [x] |
+| P3-04 | Event span tracking | `src/capture/events.py` | Creates/updates event spans on app/window transitions | [x] |
+| P3-05 | Now playing capture (Spotify) | `src/capture/now_playing.py` | Captures track, artist, album from Spotify via AppleScript | [x] |
+| P3-06 | Now playing capture (Apple Music) | `src/capture/now_playing.py` | Captures track, artist, album from Music.app | [x] |
+| P3-07 | Location capture | `src/capture/location.py` | Captures OS location snapshots with timestamps | [x] |
+| P3-08 | Safari URL capture | `src/capture/urls.py` | Gets current URL/title from Safari via AppleScript | [x] |
+| P3-09 | Chrome URL capture | `src/capture/urls.py` | Gets current URL/title from Chrome via CDP or AppleScript | [x] |
+| P3-10 | Capture daemon orchestrator | `src/capture/daemon.py` | Coordinates all capture at 1s intervals, writes to SQLite | [x] |
 
 ### Phase 4: Evidence Builder
 
