@@ -12,6 +12,13 @@ class IPCMethod(str, Enum):
     PING = "ping"
     GET_STATUS = "get_status"
     SHUTDOWN = "shutdown"
+    # Permission methods
+    PERMISSIONS_CHECK_ALL = "permissions.check_all"
+    PERMISSIONS_CHECK = "permissions.check"
+    PERMISSIONS_GET_INSTRUCTIONS = "permissions.get_instructions"
+    PERMISSIONS_OPEN_SETTINGS = "permissions.open_settings"
+    PERMISSIONS_REQUEST_ACCESSIBILITY = "permissions.request_accessibility"
+    PERMISSIONS_REQUEST_LOCATION = "permissions.request_location"
 
 
 class IPCRequest(BaseModel):

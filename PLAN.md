@@ -38,9 +38,9 @@ MVP delivers:
 
 | ID | Description | Files/Modules | Acceptance Criteria | Status |
 |----|-------------|---------------|---------------------|--------|
-| P2-01 | Implement macOS permission checker | `src/platform/permissions.py` | Detects Screen Recording, Accessibility, Location status | [ ] |
-| P2-02 | Create permission request UI flow | `electron/src/permissions/` | Shows permission instructions, blocks until all granted | [ ] |
-| P2-03 | Implement permission polling/callback | `src/platform/permissions.py` | App detects when permissions are granted without restart | [ ] |
+| P2-01 | Implement macOS permission checker | `src/platform/permissions.py` | Detects Screen Recording, Accessibility, Location status | [x] |
+| P2-02 | Create permission request UI flow | `electron/src/pages/permissions/` | Shows permission instructions, blocks until all granted | [x] |
+| P2-03 | Implement permission polling/callback | `src/platform/permissions.py`, `electron/src/pages/permissions/` | App detects when permissions are granted without restart | [x] |
 
 ### Phase 3: Capture Daemon
 

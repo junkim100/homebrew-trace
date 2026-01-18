@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import type { BackendStatus } from '../types/trace-api';
+import { useNavigate } from 'react-router-dom';
+import type { BackendStatus, AllPermissionsState } from '../types/trace-api';
 
 function Home() {
+  const navigate = useNavigate();
   const [electronIpc, setElectronIpc] = useState<string>('Testing...');
   const [pythonReady, setPythonReady] = useState<boolean>(false);
   const [pythonPing, setPythonPing] = useState<string>('Waiting...');
   const [backendStatus, setBackendStatus] = useState<BackendStatus | null>(null);
+  const [permissionsState, setPermissionsState] = useState<AllPermissionsState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,6 +41,15 @@ function Home() {
           // Get backend status
           const status = await window.traceAPI.python.getStatus();
           setBackendStatus(status);
+
+          // Check permissions
+          const permissions = await window.traceAPI.permissions.checkAll();
+          setPermissionsState(permissions);
+
+          // Redirect to permissions page if not all granted
+          if (!permissions.all_granted) {
+            navigate('/permissions');
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -53,7 +65,7 @@ function Home() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [pythonReady]);
+  }, [pythonReady, navigate]);
 
   return (
     <div style={styles.container}>
@@ -91,6 +103,32 @@ function Home() {
               <p style={styles.statusLabel}>
                 Uptime: {Math.floor(backendStatus.uptime_seconds)}s
               </p>
+            </div>
+          )}
+
+          {permissionsState && (
+            <div style={styles.statusCard}>
+              <h3 style={styles.cardTitle}>Permissions</h3>
+              <p style={{ ...styles.statusValue, color: permissionsState.all_granted ? '#34c759' : '#ff9500' }}>
+                {permissionsState.all_granted ? 'All Granted' : 'Setup Required'}
+              </p>
+              <p style={styles.statusLabel}>
+                Screen: {permissionsState.screen_recording.status}
+              </p>
+              <p style={styles.statusLabel}>
+                Accessibility: {permissionsState.accessibility.status}
+              </p>
+              <p style={styles.statusLabel}>
+                Location: {permissionsState.location.status}
+              </p>
+              {!permissionsState.all_granted && (
+                <button
+                  style={styles.setupButton}
+                  onClick={() => navigate('/permissions')}
+                >
+                  Setup Permissions
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -171,6 +209,18 @@ const styles: Record<string, React.CSSProperties> = {
   errorText: {
     color: '#ff6b6b',
     fontSize: '0.875rem',
+  },
+  setupButton: {
+    backgroundColor: '#007aff',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '0.5rem 1rem',
+    fontSize: '0.75rem',
+    fontWeight: 500,
+    cursor: 'pointer',
+    marginTop: '0.5rem',
+    width: '100%',
   },
 };
 

@@ -22,4 +22,30 @@ contextBridge.exposeInMainWorld('traceAPI', {
     // Generic call to Python backend
     call: (method, params) => ipcRenderer.invoke('python:call', method, params),
   },
+
+  // Permission methods
+  permissions: {
+    // Check all permissions
+    checkAll: () => ipcRenderer.invoke('python:call', 'permissions.check_all', {}),
+
+    // Check a specific permission
+    check: (permission) =>
+      ipcRenderer.invoke('python:call', 'permissions.check', { permission }),
+
+    // Get instructions for a permission
+    getInstructions: (permission) =>
+      ipcRenderer.invoke('python:call', 'permissions.get_instructions', { permission }),
+
+    // Open system settings for a permission
+    openSettings: (permission) =>
+      ipcRenderer.invoke('python:call', 'permissions.open_settings', { permission }),
+
+    // Request accessibility permission prompt
+    requestAccessibility: () =>
+      ipcRenderer.invoke('python:call', 'permissions.request_accessibility', {}),
+
+    // Request location permission prompt
+    requestLocation: () =>
+      ipcRenderer.invoke('python:call', 'permissions.request_location', {}),
+  },
 });
