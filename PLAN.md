@@ -61,11 +61,11 @@ MVP delivers:
 
 | ID | Description | Files/Modules | Acceptance Criteria | Status |
 |----|-------------|---------------|---------------------|--------|
-| P4-01 | Document context detector | `src/evidence/detector.py` | Detects PDF viewers, document editors from app/window info | [ ] |
-| P4-02 | PDF text extraction | `src/evidence/pdf.py` | Extracts text from PDF when file path is known | [ ] |
-| P4-03 | LLM-based OCR for screenshots | `src/evidence/ocr.py` | Sends screenshot to OpenAI vision API, extracts text | [ ] |
-| P4-04 | Text buffer storage | `src/evidence/buffers.py` | Stores compressed text buffers linked to time spans | [ ] |
-| P4-05 | Evidence builder orchestrator | `src/evidence/builder.py` | Triggers extraction on document context, manages buffers | [ ] |
+| P4-01 | Document context detector | `src/evidence/detector.py` | Detects PDF viewers, document editors from app/window info | [x] |
+| P4-02 | PDF text extraction | `src/evidence/pdf.py` | Extracts text from PDF when file path is known | [x] |
+| P4-03 | LLM-based OCR for screenshots | `src/evidence/ocr.py` | Sends screenshot to OpenAI vision API, extracts text | [x] |
+| P4-04 | Text buffer storage | `src/evidence/buffers.py` | Stores compressed text buffers linked to time spans | [x] |
+| P4-05 | Evidence builder orchestrator | `src/evidence/builder.py` | Triggers extraction on document context, manages buffers | [x] |
 
 ### Phase 5: Hourly Summarization
 
