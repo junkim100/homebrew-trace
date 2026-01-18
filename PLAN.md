@@ -101,12 +101,12 @@ MVP delivers:
 
 | ID | Description | Files/Modules | Acceptance Criteria | Status |
 |----|-------------|---------------|---------------------|--------|
-| P7-01 | Time filter parser | `src/retrieval/time.py` | Parses natural language time references to date ranges | [ ] |
-| P7-02 | Vector search | `src/retrieval/search.py` | Searches notes by embedding similarity within time range | [ ] |
-| P7-03 | Graph expansion | `src/retrieval/graph.py` | Expands results using typed edges and weights | [ ] |
-| P7-04 | Aggregates lookup | `src/retrieval/aggregates.py` | Handles "most watched/listened" queries via aggregates table | [ ] |
-| P7-05 | Answer synthesis prompt | `src/chat/prompts/answer.py` | Generates grounded answer with citations | [ ] |
-| P7-06 | Chat API endpoint | `src/chat/api.py` | Python endpoint for chat queries | [ ] |
+| P7-01 | Time filter parser | `src/retrieval/time.py` | Parses natural language time references to date ranges | [x] |
+| P7-02 | Vector search | `src/retrieval/search.py` | Searches notes by embedding similarity within time range | [x] |
+| P7-03 | Graph expansion | `src/retrieval/graph.py` | Expands results using typed edges and weights | [x] |
+| P7-04 | Aggregates lookup | `src/retrieval/aggregates.py` | Handles "most watched/listened" queries via aggregates table | [x] |
+| P7-05 | Answer synthesis prompt | `src/chat/prompts/answer.py` | Generates grounded answer with citations | [x] |
+| P7-06 | Chat API endpoint | `src/chat/api.py` | Python endpoint for chat queries | [x] |
 
 ### Phase 8: Desktop UI
 
