@@ -159,3 +159,40 @@ MVP delivers:
 4. **Embedding model**: Use OpenAI text-embedding-3-small (1536 dims) or text-embedding-3-large (3072 dims)?
 
 5. **Multi-user support**: PRD assumes single user. Should data directories support multiple profiles for shared machines?
+
+---
+
+## Future Enhancements
+
+### Phase 10: User Experience & Privacy
+
+| ID | Description | Files/Modules | Acceptance Criteria | Status |
+|----|-------------|---------------|---------------------|--------|
+| P10-01 | Selective capture blocklist | `src/capture/blocklist.py`, `electron/src/pages/Settings.tsx` | Users can block specific apps/domains from capture (banking, medical) | [ ] |
+| P10-02 | Export/backup functionality | `src/core/export.py` | Export all notes and graph to portable format (JSON, Markdown archive) | [ ] |
+| P10-03 | Open loop tracking UI | `electron/src/components/OpenLoops.tsx` | Surface incomplete tasks from notes with optional reminders | [ ] |
+| P10-04 | Graph visualization UI | `electron/src/pages/Graph.tsx` | Interactive knowledge graph explorer in desktop app | [ ] |
+
+### Phase 11: Platform Integration
+
+| ID | Description | Files/Modules | Acceptance Criteria | Status |
+|----|-------------|---------------|---------------------|--------|
+| P11-01 | Spotlight integration | `src/platform/spotlight.py` | macOS Spotlight can search Trace notes | [ ] |
+| P11-02 | Global keyboard shortcuts | `electron/main.js`, `src/platform/shortcuts.py` | Hotkey to open chat, quick capture annotations | [ ] |
+| P11-03 | Menu bar quick actions | `electron/main.js` | Quick access to recent notes, current activity status | [ ] |
+
+### Phase 12: Analytics & Insights
+
+| ID | Description | Files/Modules | Acceptance Criteria | Status |
+|----|-------------|---------------|---------------------|--------|
+| P12-01 | Activity dashboard | `electron/src/pages/Dashboard.tsx` | Visualizations: time per app/topic, trends, heatmaps | [ ] |
+| P12-02 | Weekly digest | `src/insights/digest.py`, `src/platform/notifications.py` | Automated weekly summary notification | [ ] |
+| P12-03 | Pattern detection | `src/insights/patterns.py` | Surface productivity patterns ("You code best in mornings") | [ ] |
+
+### Phase 13: Future Platform Expansion
+
+| ID | Description | Files/Modules | Acceptance Criteria | Status |
+|----|-------------|---------------|---------------------|--------|
+| P13-01 | iOS companion app | `ios/` | Read-only app for querying notes on mobile | [ ] |
+| P13-02 | iCloud sync | `src/sync/icloud.py` | Optional sync of notes (not raw data) across devices | [ ] |
+| P13-03 | Data retention policies | `src/core/retention.py`, `electron/src/pages/Settings.tsx` | Configurable auto-deletion of old notes (e.g., keep 1 year) | [ ] |
