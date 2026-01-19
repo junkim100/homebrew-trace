@@ -19,8 +19,8 @@ from src.chat.agentic.schemas import PlanStep, QueryPlan
 
 logger = logging.getLogger(__name__)
 
-# Model for planning (use a capable but cost-effective model)
-PLANNER_MODEL = "gpt-4o-mini"
+# Model for planning
+PLANNER_MODEL = "gpt-4o"
 
 
 class QueryPlanner:

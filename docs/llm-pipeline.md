@@ -10,11 +10,9 @@ This document details the AI models, prompts, and inputs used throughout Trace's
 | OCR | gpt-5-nano-2025-08-07 | Extract text from images | Screenshot | Extracted text |
 | Hourly Summary | gpt-5-mini-2025-08-07 | Generate activity notes | Screenshots + timeline | Structured JSON |
 | Daily Revision | gpt-5.2-2025-12-11 | Add context, normalize | Hourly notes | Revised JSON |
-| Query Planning | gpt-4o-mini | Decompose complex queries | User query | Execution plan |
-| Answer Synthesis | gpt-4o-mini | Generate cited answers | Notes + context | Answer text |
+| Query Planning | gpt-4o | Decompose complex queries | User query | Execution plan |
+| Answer Synthesis | gpt-5.2-2025-12-11 | Generate cited answers | Notes + context | Answer text |
 | Embeddings | text-embedding-3-small | Semantic search vectors | Note text | 1536-dim vector |
-
-> **Note**: The `gpt-5-*` models are configured for future OpenAI releases. Until available, comparable current models (gpt-4o-mini, gpt-4o) are used as fallbacks.
 
 ## Expected API Cost
 

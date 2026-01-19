@@ -21,7 +21,7 @@ from src.retrieval.time import TimeFilter
 logger = logging.getLogger(__name__)
 
 # Model for answer synthesis
-ANSWER_MODEL = "gpt-4o-mini"
+ANSWER_MODEL = "gpt-5.2-2025-12-11"
 
 # System prompt for answer synthesis
 SYSTEM_PROMPT = """You are a helpful assistant that answers questions about a user's digital activity history. You have access to notes that summarize their activities, and you should provide accurate, grounded answers based on this evidence.
