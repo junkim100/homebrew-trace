@@ -4,18 +4,26 @@ Chat API Endpoint for Trace
 Python endpoint for chat queries. Orchestrates retrieval, graph expansion,
 aggregates lookup, and answer synthesis.
 
+Supports both simple query routing and advanced agentic processing for
+complex multi-step queries.
+
 P7-06: Chat API endpoint
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
+from src.chat.agentic.classifier import QueryClassifier
+from src.chat.agentic.executor import ExecutionResult, PlanExecutor
+from src.chat.agentic.planner import QueryPlanner
+from src.chat.agentic.schemas import QueryPlan
 from src.chat.prompts.answer import AnswerSynthesizer, Citation
 from src.core.paths import DB_PATH
 from src.retrieval.aggregates import AggregateItem, AggregatesLookup
 from src.retrieval.graph import GraphExpander, RelatedEntity
+from src.retrieval.hierarchical import HierarchicalSearcher
 from src.retrieval.search import NoteMatch, VectorSearcher
 from src.retrieval.time import TimeFilter, parse_time_filter
 
@@ -31,6 +39,7 @@ class ChatRequest:
     include_graph_expansion: bool = True
     include_aggregates: bool = True
     max_results: int = 10
+    use_agentic: bool = True  # Enable agentic processing for complex queries
 
 
 @dataclass
@@ -46,10 +55,14 @@ class ChatResponse:
     query_type: str
     confidence: float
     processing_time_ms: float
+    # Agentic pipeline metadata
+    plan_summary: str | None = None
+    web_citations: list[dict] = field(default_factory=list)
+    patterns: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Convert to dictionary representation."""
-        return {
+        result = {
             "answer": self.answer,
             "citations": [c.to_dict() for c in self.citations],
             "notes": [n.to_dict() for n in self.notes],
@@ -60,6 +73,14 @@ class ChatResponse:
             "confidence": self.confidence,
             "processing_time_ms": self.processing_time_ms,
         }
+        # Include agentic metadata if present
+        if self.plan_summary:
+            result["plan_summary"] = self.plan_summary
+        if self.web_citations:
+            result["web_citations"] = self.web_citations
+        if self.patterns:
+            result["patterns"] = self.patterns
+        return result
 
 
 class ChatAPI:
@@ -68,10 +89,11 @@ class ChatAPI:
 
     Orchestrates:
     1. Time filter parsing
-    2. Vector search
-    3. Graph expansion
-    4. Aggregates lookup
-    5. Answer synthesis
+    2. Query complexity classification
+    3. Agentic planning (for complex queries)
+    4. Vector search / Graph expansion
+    5. Aggregates lookup
+    6. Answer synthesis
     """
 
     def __init__(
@@ -89,15 +111,24 @@ class ChatAPI:
         self.db_path = Path(db_path) if db_path else DB_PATH
         self._api_key = api_key
 
-        # Initialize components
+        # Initialize core components
         self._searcher = VectorSearcher(db_path=self.db_path, api_key=api_key)
+        self._hierarchical_searcher = HierarchicalSearcher(db_path=self.db_path, api_key=api_key)
         self._expander = GraphExpander(db_path=self.db_path)
         self._aggregates = AggregatesLookup(db_path=self.db_path)
         self._synthesizer = AnswerSynthesizer(api_key=api_key)
 
+        # Initialize agentic components
+        self._classifier = QueryClassifier()
+        self._planner = QueryPlanner(api_key=api_key)
+        self._executor = PlanExecutor(db_path=self.db_path, api_key=api_key)
+
     def chat(self, request: ChatRequest) -> ChatResponse:
         """
         Process a chat request and return a response.
+
+        Routes complex queries through the agentic pipeline for
+        multi-step reasoning and retrieval.
 
         Args:
             request: ChatRequest with user query
@@ -116,7 +147,16 @@ class ChatAPI:
         if time_filter is None:
             time_filter = parse_time_filter(request.query)
 
-        # Detect query type
+        # Check if query should use agentic pipeline
+        if request.use_agentic:
+            classification = self._classifier.classify(request.query)
+            if classification.is_complex:
+                logger.info(f"Using agentic pipeline for {classification.query_type} query")
+                return self._handle_agentic_query(
+                    request, time_filter, classification.query_type, start_time
+                )
+
+        # Detect query type for simple routing
         query_type = self._detect_query_type(request.query)
 
         # Route based on query type
@@ -142,6 +182,171 @@ class ChatAPI:
             query_type=query_type,
             confidence=response["confidence"],
             processing_time_ms=processing_time,
+        )
+
+    def _handle_agentic_query(
+        self,
+        request: ChatRequest,
+        time_filter: TimeFilter | None,
+        query_type: str,
+        start_time: float,
+    ) -> ChatResponse:
+        """
+        Handle a complex query using the agentic pipeline.
+
+        Args:
+            request: ChatRequest with user query
+            time_filter: Parsed time filter
+            query_type: Detected query type from classifier
+            start_time: Query start time for timing
+
+        Returns:
+            ChatResponse with answer and supporting data
+        """
+        import time
+
+        try:
+            # Generate execution plan
+            time_context = time_filter.description if time_filter else None
+            plan = self._planner.plan_for_type(
+                query=request.query,
+                query_type=query_type,
+                time_filter_description=time_context,
+            )
+
+            logger.info(f"Generated plan with {len(plan.steps)} steps")
+
+            # Execute the plan
+            execution_result = self._executor.execute(plan)
+
+            # Convert execution result to ChatResponse
+            return self._build_agentic_response(
+                request=request,
+                plan=plan,
+                execution_result=execution_result,
+                time_filter=time_filter,
+                start_time=start_time,
+            )
+
+        except Exception as e:
+            logger.error(f"Agentic pipeline failed: {e}, falling back to simple search")
+            # Fallback to simple semantic search
+            response = self._handle_semantic_query(request, time_filter)
+            processing_time = (time.time() - start_time) * 1000
+
+            return ChatResponse(
+                answer=response["answer"],
+                citations=response["citations"],
+                notes=response["notes"],
+                time_filter=time_filter,
+                related_entities=response["related_entities"],
+                aggregates=response["aggregates"],
+                query_type="semantic",
+                confidence=response["confidence"],
+                processing_time_ms=processing_time,
+                plan_summary=f"Fallback to simple search (error: {e})",
+            )
+
+    def _build_agentic_response(
+        self,
+        request: ChatRequest,
+        plan: QueryPlan,
+        execution_result: ExecutionResult,
+        time_filter: TimeFilter | None,
+        start_time: float,
+    ) -> ChatResponse:
+        """
+        Build a ChatResponse from agentic execution results.
+
+        Args:
+            request: Original request
+            plan: The executed plan
+            execution_result: Results from plan execution
+            time_filter: Time filter used
+            start_time: Query start time
+
+        Returns:
+            ChatResponse
+        """
+        import time
+
+        # Convert notes from dicts back to NoteMatch objects
+        notes: list[NoteMatch] = []
+        for note_dict in execution_result.merged_notes[: request.max_results]:
+            try:
+                notes.append(NoteMatch.from_dict(note_dict))
+            except Exception as e:
+                logger.debug(f"Failed to convert note dict: {e}")
+                continue
+
+        # Convert entities
+        related_entities: list[RelatedEntity] = []
+        for entity_dict in execution_result.merged_entities[:20]:
+            try:
+                related_entities.append(
+                    RelatedEntity(
+                        entity_id=entity_dict.get("entity_id", ""),
+                        entity_type=entity_dict.get("entity_type", ""),
+                        canonical_name=entity_dict.get("canonical_name", ""),
+                        edge_type=entity_dict.get("edge_type", ""),
+                        weight=entity_dict.get("weight", 0.0),
+                        source_entity_id=entity_dict.get("source_entity_id", ""),
+                        source_entity_name=entity_dict.get("source_entity_name", ""),
+                        direction=entity_dict.get("direction", "to"),
+                    )
+                )
+            except Exception as e:
+                logger.debug(f"Failed to convert entity dict: {e}")
+                continue
+
+        # Convert aggregates
+        aggregates: list[AggregateItem] = []
+        for agg_dict in execution_result.aggregates[:10]:
+            try:
+                aggregates.append(
+                    AggregateItem(
+                        key=agg_dict.get("key", ""),
+                        key_type=agg_dict.get("key_type", ""),
+                        value=agg_dict.get("value", 0),
+                        period_type=agg_dict.get("period_type", "custom"),
+                        period_start=time_filter.start if time_filter else None,
+                        period_end=time_filter.end if time_filter else None,
+                    )
+                )
+            except Exception as e:
+                logger.debug(f"Failed to convert aggregate dict: {e}")
+                continue
+
+        # Synthesize final answer
+        if notes:
+            synthesized = self._synthesizer.synthesize(
+                question=request.query,
+                notes=notes,
+                time_filter=time_filter,
+                aggregates=aggregates,
+                related_entities=related_entities,
+            )
+        else:
+            synthesized = self._synthesizer.synthesize_without_context(request.query)
+
+        processing_time = (time.time() - start_time) * 1000
+
+        # Build plan summary
+        plan_summary = f"{plan.query_type} query: {plan.reasoning}"
+
+        return ChatResponse(
+            answer=synthesized.answer,
+            citations=synthesized.citations,
+            notes=notes,
+            time_filter=time_filter,
+            related_entities=related_entities,
+            aggregates=aggregates,
+            query_type=plan.query_type,
+            confidence=synthesized.confidence,
+            processing_time_ms=processing_time,
+            plan_summary=plan_summary,
+            web_citations=execution_result.web_results,
+            patterns=execution_result.patterns,
         )
 
     def _detect_query_type(
@@ -350,15 +555,28 @@ class ChatAPI:
         request: ChatRequest,
         time_filter: TimeFilter | None,
     ) -> dict:
-        """Handle general semantic search queries."""
-        # Perform vector search
-        search_result = self._searcher.search(
+        """
+        Handle general semantic search queries using hierarchical search.
+
+        Two-stage approach:
+        1. Search daily summaries first (coarse filter)
+        2. Drill down to hourly notes for matched days (fine details)
+
+        This provides better context by giving the LLM both broad daily
+        overviews and detailed hourly information.
+        """
+        # Perform hierarchical search (daily first, then hourly)
+        hierarchical_result = self._hierarchical_searcher.search(
             query=request.query,
             time_filter=time_filter,
-            limit=request.max_results,
+            max_days=5,  # Top 5 most relevant days
+            max_hours_per_day=3,  # Top 3 hours per day
+            include_hourly_drilldown=True,
         )
 
-        notes = search_result.matches
+        # Get notes optimized for LLM context (daily summaries first, then hourly)
+        notes = hierarchical_result.get_context_for_llm(max_notes=request.max_results)
+
         related_entities = []
         aggregates: list[AggregateItem] = []
 

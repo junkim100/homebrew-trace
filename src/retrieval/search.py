@@ -56,6 +56,31 @@ class NoteMatch:
             "score": self.score,
         }
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "NoteMatch":
+        """Create NoteMatch from dictionary representation."""
+        start_ts = data.get("start_ts", "")
+        end_ts = data.get("end_ts", "")
+
+        # Parse timestamps if they're strings
+        if isinstance(start_ts, str):
+            start_ts = datetime.fromisoformat(start_ts)
+        if isinstance(end_ts, str):
+            end_ts = datetime.fromisoformat(end_ts)
+
+        return cls(
+            note_id=data.get("note_id", ""),
+            note_type=data.get("note_type", "hour"),
+            start_ts=start_ts,
+            end_ts=end_ts,
+            file_path=data.get("file_path", ""),
+            summary=data.get("summary", ""),
+            categories=data.get("categories", []),
+            entities=data.get("entities", []),
+            distance=data.get("distance", 0.0),
+            score=data.get("score", 0.0),
+        )
+
 
 @dataclass
 class SearchResult:
