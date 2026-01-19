@@ -319,29 +319,88 @@ class NowPlayingCapture:
     Captures currently playing media from all supported sources.
 
     Prioritizes sources based on playback state (playing > paused > stopped).
+    Only returns media that is ACTIVELY PLAYING - paused media is not returned
+    to prevent false positives in activity tracking.
     """
 
-    def __init__(self):
-        """Initialize the now playing capturer."""
+    def __init__(self, include_paused: bool = False):
+        """
+        Initialize the now playing capturer.
+
+        Args:
+            include_paused: If True, also return paused media. Default is False
+                           to prevent tracking paused media as "being listened to".
+        """
         self._last_capture: NowPlaying | None = None
+        self._include_paused = include_paused
 
     def capture(self, timestamp: datetime | None = None) -> NowPlaying | None:
         """
         Capture currently playing media from any active source.
 
         Checks Spotify and Apple Music, returning the one that is actively
-        playing (or paused if nothing is playing).
+        playing. By default, paused media is NOT returned to prevent false
+        positives in activity tracking.
 
         Args:
             timestamp: Timestamp for the capture (defaults to now)
 
         Returns:
-            NowPlaying information or None if no media is playing
+            NowPlaying information or None if no media is actively playing
         """
         if timestamp is None:
             timestamp = datetime.now()
 
         # Try all sources
+        sources = [
+            ("spotify", capture_spotify),
+            ("apple_music", capture_apple_music),
+        ]
+
+        candidates = []
+        for name, capture_func in sources:
+            try:
+                result = capture_func(timestamp)
+                if result:
+                    # Only include if actually playing, unless include_paused is True
+                    if result.state == PlayerState.PLAYING:
+                        candidates.append(result)
+                    elif self._include_paused and result.state == PlayerState.PAUSED:
+                        candidates.append(result)
+                    # Skip STOPPED and UNKNOWN states
+            except Exception as e:
+                logger.debug(f"Failed to capture from {name}: {e}")
+
+        if not candidates:
+            self._last_capture = None
+            return None
+
+        # Prioritize: playing > paused
+        priority = {
+            PlayerState.PLAYING: 0,
+            PlayerState.PAUSED: 1,
+        }
+
+        candidates.sort(key=lambda x: priority.get(x.state, 99))
+        self._last_capture = candidates[0]
+        return self._last_capture
+
+    def capture_all_states(self, timestamp: datetime | None = None) -> NowPlaying | None:
+        """
+        Capture media from any state (playing, paused, stopped).
+
+        This is the original behavior that captures any media state.
+        Use this when you need to know about paused media too.
+
+        Args:
+            timestamp: Timestamp for the capture (defaults to now)
+
+        Returns:
+            NowPlaying information or None if no media apps have content
+        """
+        if timestamp is None:
+            timestamp = datetime.now()
+
         sources = [
             ("spotify", capture_spotify),
             ("apple_music", capture_apple_music),
@@ -368,8 +427,17 @@ class NowPlayingCapture:
         }
 
         candidates.sort(key=lambda x: priority.get(x.state, 99))
-        self._last_capture = candidates[0]
-        return self._last_capture
+        return candidates[0]
+
+    def is_playing(self) -> bool:
+        """
+        Check if any media is currently playing (not paused).
+
+        Returns:
+            True if media is actively playing, False otherwise
+        """
+        result = self.capture()
+        return result is not None and result.state == PlayerState.PLAYING
 
     def get_last_capture(self) -> NowPlaying | None:
         """Get the last captured now playing information."""
@@ -380,43 +448,72 @@ if __name__ == "__main__":
     import fire
 
     def spotify():
-        """Capture Spotify now playing."""
+        """Capture Spotify now playing (any state)."""
         result = capture_spotify()
         if result:
             return json.loads(result.to_json())
         return None
 
     def apple_music():
-        """Capture Apple Music now playing."""
+        """Capture Apple Music now playing (any state)."""
         result = capture_apple_music()
         if result:
             return json.loads(result.to_json())
         return None
 
-    def capture():
-        """Capture from any active source."""
-        capturer = NowPlayingCapture()
+    def capture(include_paused: bool = False):
+        """
+        Capture from any active source.
+
+        Args:
+            include_paused: If True, also return paused media
+        """
+        capturer = NowPlayingCapture(include_paused=include_paused)
         result = capturer.capture()
+        if result:
+            return json.loads(result.to_json())
+        return {"status": "nothing_playing", "note": "No media is actively playing"}
+
+    def capture_all():
+        """Capture from any source including paused/stopped."""
+        capturer = NowPlayingCapture()
+        result = capturer.capture_all_states()
         if result:
             return json.loads(result.to_json())
         return None
 
-    def watch(interval: float = 2.0, count: int = 30):
-        """Watch now playing changes."""
+    def is_playing():
+        """Check if any media is currently playing (not paused)."""
+        capturer = NowPlayingCapture()
+        return capturer.is_playing()
+
+    def watch(interval: float = 1.0, count: int = 60, include_paused: bool = False):
+        """
+        Watch now playing changes with state indication.
+
+        Args:
+            interval: Check interval in seconds
+            count: Number of checks to perform
+            include_paused: Also show paused media
+        """
         import time
 
-        capturer = NowPlayingCapture()
-        last_track = None
+        capturer = NowPlayingCapture(include_paused=include_paused)
+        last_state = None
 
         for _ in range(count):
             result = capturer.capture()
             if result and result.track:
-                track_key = f"{result.source}:{result.track}"
-                if track_key != last_track:
+                state_key = f"{result.source}:{result.track}:{result.state.value}"
+                if state_key != last_state:
+                    icon = "▶️" if result.state == PlayerState.PLAYING else "⏸️"
                     print(
-                        f"[{result.source}] {result.track} - {result.artist} ({result.state.value})"
+                        f"{icon} [{result.source}] {result.track} - {result.artist} ({result.state.value})"
                     )
-                    last_track = track_key
+                    last_state = state_key
+            elif last_state is not None:
+                print("⏹️ Nothing playing")
+                last_state = None
             time.sleep(interval)
 
     fire.Fire(
@@ -424,6 +521,8 @@ if __name__ == "__main__":
             "spotify": spotify,
             "apple_music": apple_music,
             "capture": capture,
+            "capture_all": capture_all,
+            "is_playing": is_playing,
             "watch": watch,
         }
     )

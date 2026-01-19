@@ -6,7 +6,7 @@ Coordinates all capture activities at 1-second intervals:
 - Foreground app/window metadata
 - Screenshot deduplication
 - Event span tracking
-- Now playing (Spotify, Apple Music)
+- Now playing (via macOS MediaRemote - works with any media app)
 - Location snapshots
 - Browser URLs
 
@@ -29,7 +29,7 @@ from src.capture.dedup import DuplicateTracker
 from src.capture.events import EventTracker
 from src.capture.foreground import ForegroundApp, capture_foreground_app
 from src.capture.location import LocationCapture
-from src.capture.now_playing import NowPlayingCapture
+from src.capture.media_remote import MediaRemoteCapture
 from src.capture.screenshots import CapturedScreenshot, MultiMonitorCapture
 from src.capture.urls import URLCapture
 from src.core.paths import ensure_data_directories
@@ -111,7 +111,7 @@ class CaptureDaemon:
         self._screenshot_capture = MultiMonitorCapture(jpeg_quality=jpeg_quality)
         self._dedup_tracker = DuplicateTracker(threshold=dedup_threshold)
         self._event_tracker = EventTracker(db_path=str(self.db_path) if self.db_path else None)
-        self._now_playing_capture = NowPlayingCapture()
+        self._now_playing_capture = MediaRemoteCapture()
         self._location_capture = LocationCapture(min_interval_seconds=location_interval)
         self._url_capture = URLCapture()
 
