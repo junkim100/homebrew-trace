@@ -185,8 +185,7 @@ class OCRExtractor:
                         ],
                     },
                 ],
-                max_tokens=max_tokens or 4096,
-                temperature=0,
+                max_completion_tokens=max_tokens or 4096,
             )
 
             text = response.choices[0].message.content or ""

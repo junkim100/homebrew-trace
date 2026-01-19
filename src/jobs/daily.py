@@ -434,8 +434,7 @@ class DailyJobExecutor:
             response = client.chat.completions.create(
                 model=DAILY_MODEL,
                 messages=messages,
-                temperature=0.3,
-                max_tokens=8000,
+                max_completion_tokens=8000,
             )
 
             content = response.choices[0].message.content
