@@ -210,13 +210,34 @@ All data is stored locally in `~/Library/Application Support/Trace/`:
 
 | Task | Model | Purpose |
 |------|-------|---------|
-| Frame Triage | gpt-4o-mini | Score screenshot importance |
-| OCR | gpt-4o-mini | Extract text from images |
-| Hourly Summary | gpt-4o | Generate activity summaries with vision |
-| Daily Revision | gpt-4o | Add context, normalize entities |
+| Frame Triage | gpt-5-nano-2025-08-07 | Score screenshot importance (heuristic by default) |
+| OCR | gpt-5-nano-2025-08-07 | Extract text from document screenshots |
+| Hourly Summary | gpt-5-mini-2025-08-07 | Generate activity summaries with vision |
+| Daily Revision | gpt-5.2-2025-12-11 | Add context, normalize entities, build graph |
 | Query Planning | gpt-4o-mini | Decompose complex queries |
 | Answer Synthesis | gpt-4o-mini | Generate cited answers |
-| Embeddings | text-embedding-3-small | Semantic search vectors |
+| Embeddings | text-embedding-3-small | Semantic search vectors (1536 dims) |
+
+> **Note**: The `gpt-5-*` models are configured for future OpenAI releases. Until available, comparable current models (gpt-4o-mini, gpt-4o) are used as fallbacks.
+
+### Expected API Cost
+
+For a typical day with **10 hours of screen time**:
+
+| Stage | API Calls | Est. Cost |
+|-------|-----------|-----------|
+| Hourly Summarization | 10 (1 per hour) | ~$0.15 |
+| Daily Revision | 1 | ~$0.05 |
+| Embeddings | 11 | ~$0.00 |
+| OCR (document detection) | ~5 | ~$0.001 |
+| **Total per day** | | **~$0.20** |
+
+**Monthly estimate**: ~$6/month for regular daily use
+
+Cost factors:
+- More screen time → +$0.015/hour
+- Heavy document reading → +$0.001/document
+- Chat queries → ~$0.001-0.005/query
 
 ---
 

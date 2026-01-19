@@ -7,12 +7,50 @@ This document details the AI models, prompts, and inputs used throughout Trace's
 | Stage | Model | Purpose | Input | Output |
 |-------|-------|---------|-------|--------|
 | Frame Triage | gpt-5-nano-2025-08-07 | Score screenshot importance | Screenshot + context | Category + score |
-| OCR | gpt-4o-mini | Extract text from images | Screenshot | Extracted text |
+| OCR | gpt-5-nano-2025-08-07 | Extract text from images | Screenshot | Extracted text |
 | Hourly Summary | gpt-5-mini-2025-08-07 | Generate activity notes | Screenshots + timeline | Structured JSON |
 | Daily Revision | gpt-5.2-2025-12-11 | Add context, normalize | Hourly notes | Revised JSON |
 | Query Planning | gpt-4o-mini | Decompose complex queries | User query | Execution plan |
 | Answer Synthesis | gpt-4o-mini | Generate cited answers | Notes + context | Answer text |
 | Embeddings | text-embedding-3-small | Semantic search vectors | Note text | 1536-dim vector |
+
+> **Note**: The `gpt-5-*` models are configured for future OpenAI releases. Until available, comparable current models (gpt-4o-mini, gpt-4o) are used as fallbacks.
+
+## Expected API Cost
+
+For a typical day with **10 hours of screen time**:
+
+| Stage | API Calls/Day | Tokens (approx) | Est. Cost |
+|-------|---------------|-----------------|-----------|
+| Hourly Summarization | 10 | 20K input + 100 images + 8K output | ~$0.15 |
+| Daily Revision | 1 | 8K input + 3K output | ~$0.05 |
+| Embeddings | 11 | 4.4K tokens | ~$0.00 |
+| OCR (document detection) | ~5 | 5 images + 1K output | ~$0.001 |
+| Frame Triage | 0 (heuristic default) | - | $0.00 |
+| **Total per day** | | | **~$0.20** |
+
+**Monthly estimate**: ~$6/month for regular daily use
+**Annual estimate**: ~$73/year
+
+### Cost Variables
+
+| Factor | Impact |
+|--------|--------|
+| Additional screen time | +$0.015/hour |
+| Document reading (triggers OCR) | +$0.001/document |
+| Chat queries | ~$0.001-0.005/query |
+| Vision triage enabled | +$0.01/hour |
+
+### Cost Optimization Strategies
+
+| Strategy | Implementation |
+|----------|----------------|
+| Low detail images | `detail: "low"` for all vision API calls |
+| Heuristic triage | Skip API for obvious frames (default behavior) |
+| Batch embeddings | Process multiple notes together |
+| Model selection | Use nano/mini models where possible |
+| Token budgeting | Truncate long text inputs |
+| Caching | Skip re-processing existing notes |
 
 ## 1. Frame Triage
 
