@@ -103,14 +103,11 @@ def handle_read_note(params: dict[str, Any]) -> dict[str, Any]:
 
         note_path = NOTES_DIR / year / month / day / filename
 
-        # Security: Ensure the resolved path is within NOTES_DIR to prevent path traversal
-        try:
-            resolved_path = note_path.resolve()
-            notes_dir_resolved = NOTES_DIR.resolve()
-            if not str(resolved_path).startswith(str(notes_dir_resolved)):
-                raise ValueError(f"Invalid note path: {note_id}")
-        except (OSError, RuntimeError) as e:
-            raise ValueError(f"Invalid note path: {note_id}") from e
+        # Validate that the resolved path stays within NOTES_DIR
+        resolved_path = note_path.resolve()
+        notes_dir_resolved = NOTES_DIR.resolve()
+        if not resolved_path.is_relative_to(notes_dir_resolved):
+            raise ValueError(f"Invalid note_id: path traversal detected")
 
         if not note_path.exists():
             raise FileNotFoundError(f"Note not found: {note_id}")
@@ -200,10 +197,10 @@ def handle_get_settings(params: dict[str, Any]) -> dict[str, Any]:
     """
     import os
 
-    from src.core.paths import CACHE_DIR, DATA_DIR, DB_PATH, NOTES_DIR
+    from src.core.paths import CACHE_DIR, DATA_ROOT, DB_PATH, NOTES_DIR
 
     return {
-        "data_dir": str(DATA_DIR),
+        "data_dir": str(DATA_ROOT),
         "notes_dir": str(NOTES_DIR),
         "db_path": str(DB_PATH),
         "cache_dir": str(CACHE_DIR),

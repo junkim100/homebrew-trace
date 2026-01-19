@@ -277,7 +277,7 @@ class VectorSearcher:
             params = list(entity_ids) + [min_strength]
 
             if time_filter:
-                params.extend([time_filter.start.isoformat(), time_filter.end.isoformat()])
+                params.extend([time_filter.end.isoformat(), time_filter.start.isoformat()])
                 sql = f"""
                     SELECT DISTINCT n.note_id, n.note_type, n.start_ts, n.end_ts,
                            n.file_path, n.json_payload, ne.strength
