@@ -2,13 +2,15 @@
 
 This document describes how data moves through the Trace system from capture to query.
 
+> **Data Location**: All data is stored in `~/Library/Application Support/Trace/` on macOS.
+
 ## Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              DATA FLOW OVERVIEW                              │
+│                              DATA FLOW OVERVIEW                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
+│                                                                             │
 │  CAPTURE (every 1 second)                                                   │
 │  ════════════════════════                                                   │
 │      Screenshots ───────────────┐                                           │
@@ -17,34 +19,34 @@ This document describes how data moves through the Trace system from capture to 
 │      Browser URLs ──────────────┤                                           │
 │      Now Playing ───────────────┤                                           │
 │      Location ──────────────────┘                                           │
-│                                   │                                          │
-│                                   ▼                                          │
+│                                   │                                         │
+│                                   ▼                                         │
 │  HOURLY SUMMARIZATION (every hour)                                          │
 │  ═════════════════════════════════                                          │
 │      events ─────────────────────┐                                          │
 │      screenshots ────────────────┼───▶ Vision LLM ───▶ notes table          │
 │      text_buffers ───────────────┘              │          │                │
-│                                                  │          ▼                │
-│                                                  ▼     entities table        │
-│                                          notes/YYYY/MM/DD/                   │
-│                                          hour-YYYYMMDD-HH.md                 │
-│                                   │                                          │
-│                                   ▼                                          │
+│                                                  │          ▼               │
+│                                                  ▼     entities table       │
+│                                          notes/YYYY/MM/DD/                  │
+│                                          hour-YYYYMMDD-HH.md                │
+│                                   │                                         │
+│                                   ▼                                         │
 │  DAILY REVISION (once per day at 3 AM)                                      │
 │  ═════════════════════════════════════                                      │
 │      hourly notes ───────────────────▶ LLM ───▶ revised notes               │
-│                                            │                                 │
+│                                            │                                │
 │                                            ├───▶ edges table (graph)        │
 │                                            ├───▶ aggregates table           │
 │                                            └───▶ notes/day-YYYYMMDD.md      │
-│                                   │                                          │
-│                                   ▼                                          │
+│                                   │                                         │
+│                                   ▼                                         │
 │  CLEANUP (after successful revision)                                        │
 │  ═══════════════════════════════════                                        │
 │      DELETE: cache/screenshots/YYYYMMDD/                                    │
 │      DELETE: cache/text_buffers/YYYYMMDD/                                   │
 │      DELETE: events older than 7 days                                       │
-│                                                                              │
+│                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -145,33 +147,33 @@ Event 1: Safari (14:00-14:05)  Event 2: VS Code (14:05-14:15)
 ┌──────────────────────────────────────────────────────────────────┐
 │                    EVIDENCE AGGREGATION                          │
 ├──────────────────────────────────────────────────────────────────┤
-│                                                                   │
+│                                                                  │
 │  events table (hour window)                                      │
 │  ───────────────────────────                                     │
-│  ┌─────────┬───────────┬──────────────┬─────────────────┐       │
-│  │event_id │ start_ts  │ app_name     │ window_title    │       │
-│  ├─────────┼───────────┼──────────────┼─────────────────┤       │
-│  │ ev-001  │ 14:00:23  │ VS Code      │ main.py         │       │
-│  │ ev-002  │ 14:05:45  │ Chrome       │ Python Docs     │       │
-│  └─────────┴───────────┴──────────────┴─────────────────┘       │
-│                              │                                    │
-│                              ▼                                    │
-│  screenshots table ──────────┼──────────────────────────────────│
-│                              │                                    │
-│  text_buffers table ─────────┼──────────────────────────────────│
-│                              │                                    │
-│                              ▼                                    │
-│  ┌────────────────────────────────────────────────────────┐     │
-│  │                    HourlyEvidence                       │     │
-│  │  hour_start: 2025-01-15 14:00:00                       │     │
-│  │  hour_end: 2025-01-15 15:00:00                         │     │
-│  │  events: [Event(...), Event(...)]                      │     │
-│  │  screenshots: [ScreenshotCandidate(...), ...]          │     │
-│  │  text_snippets: [TextSnippet(...), ...]                │     │
-│  │  now_playing_spans: [NowPlayingSpan(...), ...]         │     │
-│  │  locations: ["Home Office"]                            │     │
-│  └────────────────────────────────────────────────────────┘     │
-│                                                                   │
+│  ┌─────────┬───────────┬──────────────┬─────────────────┐        │
+│  │event_id │ start_ts  │ app_name     │ window_title    │        │
+│  ├─────────┼───────────┼──────────────┼─────────────────┤        │
+│  │ ev-001  │ 14:00:23  │ VS Code      │ main.py         │        │
+│  │ ev-002  │ 14:05:45  │ Chrome       │ Python Docs     │        │
+│  └─────────┴───────────┴──────────────┴─────────────────┘        │
+│                              │                                   │
+│                              ▼                                   │
+│  screenshots table ──────────┼───────────────────────────────────│
+│                              │                                   │
+│  text_buffers table ─────────┼───────────────────────────────────│
+│                              │                                   │
+│                              ▼                                   │
+│  ┌────────────────────────────────────────────────────────┐      │
+│  │                    HourlyEvidence                      │      │
+│  │  hour_start: 2025-01-15 14:00:00                       │      │
+│  │  hour_end: 2025-01-15 15:00:00                         │      │
+│  │  events: [Event(...), Event(...)]                      │      │
+│  │  screenshots: [ScreenshotCandidate(...), ...]          │      │
+│  │  text_snippets: [TextSnippet(...), ...]                │      │
+│  │  now_playing_spans: [NowPlayingSpan(...), ...]         │      │
+│  │  locations: ["Home Office"]                            │      │
+│  └────────────────────────────────────────────────────────┘      │
+│                                                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -202,35 +204,35 @@ Event 1: Safari (14:00-14:05)  Event 2: VS Code (14:05-14:15)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     VISION LLM CALL                          │
+│                     VISION LLM CALL                         │
 ├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Input:                                                      │
+│                                                             │
+│  Input:                                                     │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │ System Prompt: Schema + guidelines                    │   │
+│  │ System Prompt: Schema + guidelines                   │   │
 │  ├──────────────────────────────────────────────────────┤   │
-│  │ User Content:                                         │   │
-│  │   - Activity timeline (text)                          │   │
-│  │   - Keyframe observations (text)                      │   │
-│  │   - Extracted text (OCR/PDF)                          │   │
-│  │   - Media playing (text)                              │   │
-│  │   - 10 screenshot images (base64, low detail)         │   │
+│  │ User Content:                                        │   │
+│  │   - Activity timeline (text)                         │   │
+│  │   - Keyframe observations (text)                     │   │
+│  │   - Extracted text (OCR/PDF)                         │   │
+│  │   - Media playing (text)                             │   │
+│  │   - 10 screenshot images (base64, low detail)        │   │
 │  └──────────────────────────────────────────────────────┘   │
-│                              │                               │
-│                              ▼                               │
+│                              │                              │
+│                              ▼                              │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │              gpt-5-mini-2025-08-07                    │   │
+│  │              gpt-5-mini-2025-08-07                   │   │
 │  └──────────────────────────────────────────────────────┘   │
-│                              │                               │
-│                              ▼                               │
-│  Output:                                                     │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ HourlySummarySchema (JSON)                            │   │
-│  │   summary, categories, activities, topics,            │   │
-│  │   entities, media, documents, websites,               │   │
-│  │   co_activities, open_loops, location                 │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                              │
+│                              │                              │
+│                              ▼                              │
+│  Output:                                                    │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ HourlySummarySchema (JSON)                            │  │
+│  │   summary, categories, activities, topics,            │  │
+│  │   entities, media, documents, websites,               │  │
+│  │   co_activities, open_loops, location                 │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -275,12 +277,12 @@ Load all hourly notes for day
          ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  Notes: hour-20250115-00.md through hour-20250115-23.md     │
-│                                                              │
-│  For each note:                                              │
-│    - note_id                                                 │
-│    - hour (0-23)                                             │
-│    - summary (HourlySummarySchema)                           │
-│    - file_path                                               │
+│                                                             │
+│  For each note:                                             │
+│    - note_id                                                │
+│    - hour (0-23)                                            │
+│    - summary (HourlySummarySchema)                          │
+│    - file_path                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -288,33 +290,33 @@ Load all hourly notes for day
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    DAILY REVISION LLM                        │
+│                    DAILY REVISION LLM                       │
 ├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Input:                                                      │
+│                                                             │
+│  Input:                                                     │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ System Prompt: Revision guidelines + graph edge types │  │
+│  ├───────────────────────────────────────────────────────┤  │
+│  │ User Content:                                         │  │
+│  │   - Day overview statistics                           │  │
+│  │   - All hourly notes with summaries, entities, etc.   │  │
+│  │   - Revision instructions                             │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                              │                              │
+│                              ▼                              │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │ System Prompt: Revision guidelines + graph edge types │   │
-│  ├──────────────────────────────────────────────────────┤   │
-│  │ User Content:                                         │   │
-│  │   - Day overview statistics                           │   │
-│  │   - All hourly notes with summaries, entities, etc.   │   │
-│  │   - Revision instructions                             │   │
+│  │              gpt-5.2-2025-12-11                      │   │
 │  └──────────────────────────────────────────────────────┘   │
-│                              │                               │
-│                              ▼                               │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              gpt-5.2-2025-12-11                       │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                              │                               │
-│                              ▼                               │
-│  Output:                                                     │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │ DailyRevisionSchema (JSON)                            │   │
-│  │   day_summary, hourly_revisions,                      │   │
-│  │   entity_normalizations, graph_edges,                 │   │
-│  │   top_entities, patterns                              │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                              │
+│                              │                              │
+│                              ▼                              │
+│  Output:                                                    │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │ DailyRevisionSchema (JSON)                            │  │
+│  │   day_summary, hourly_revisions,                      │  │
+│  │   entity_normalizations, graph_edges,                 │  │
+│  │   top_entities, patterns                              │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -333,12 +335,12 @@ Revision Output
     │     - Store aliases
     │
     ├───▶ Build graph edges:
-    │     ┌───────────┬──────────┬───────────┬────────┐
-    │     │ from_id   │ to_id    │ edge_type │ weight │
-    │     ├───────────┼──────────┼───────────┼────────┤
-    │     │ python    │ vs-code  │ USED_APP  │ 0.9    │
-    │     │ python    │ lofi-girl│STUDIED_WHILE│ 0.7   │
-    │     └───────────┴──────────┴───────────┴────────┘
+    │     ┌───────────┬──────────┬─────────────┬────────┐
+    │     │ from_id   │ to_id    │  edge_type  │ weight │
+    │     ├───────────┼──────────┼─────────────┼────────┤
+    │     │ python    │ vs-code  │  USED_APP   │ 0.9    │
+    │     │ python    │ lofi-girl│STUDIED_WHILE│ 0.7    │
+    │     └───────────┴──────────┴─────────────┴────────┘
     │
     ├───▶ Compute aggregates:
     │     ┌─────────────┬──────────┬───────────┬───────┐
@@ -358,7 +360,7 @@ After successful revision:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    INTEGRITY CHECK                           │
+│                    INTEGRITY CHECK                          │
 ├─────────────────────────────────────────────────────────────┤
 │  ✓ All hourly notes exist                                   │
 │  ✓ All embeddings computed                                  │
@@ -368,7 +370,7 @@ After successful revision:
                               │
                               ▼ (if passed)
 ┌─────────────────────────────────────────────────────────────┐
-│                      DELETE                                  │
+│                      DELETE                                 │
 ├─────────────────────────────────────────────────────────────┤
 │  cache/screenshots/YYYYMMDD/  (raw screenshot files)        │
 │  cache/text_buffers/YYYYMMDD/ (extracted text)              │
@@ -379,7 +381,7 @@ After successful revision:
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   LOG DELETION                               │
+│                   LOG DELETION                              │
 │  deletion_log: date, artifact_type, count, integrity_passed │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -410,13 +412,13 @@ User Query: "What was I working on while listening to Lofi Girl last week?"
 └────────┬────────┘
          │
          ▼
-┌─────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────┐
 │                    EXECUTION PLAN                            │
-├─────────────────────────────────────────────────────────────┤
-│  Step 1: entity_search("Lofi Girl", time_filter=last_week)  │
+├──────────────────────────────────────────────────────────────┤
+│  Step 1: entity_search("Lofi Girl", time_filter=last_week)   │
 │  Step 2: graph_expand(edges=["STUDIED_WHILE", "LISTENED_TO"])│
 │  Step 3: merge_results                                       │
-└─────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────┘
          │
          ▼
 ┌─────────────────┐

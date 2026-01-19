@@ -14,7 +14,7 @@ Your Activity                    AI Processing                    Your Knowledge
 
 Screenshots          ─┐
 Active apps          ─┤                                   ┌─ Markdown Notes
-Window titles        ─┼──▶  Hourly Summarization  ──▶    ├─ Entity Graph
+Window titles        ─┼──▶  Hourly Summarization  ──▶     ├─ Entity Graph
 Browser URLs         ─┤     (Vision LLM)                  ├─ Vector Embeddings
 Now playing music    ─┤                                   └─ Searchable Index
 Location             ─┘
@@ -70,57 +70,105 @@ Location             ─┘
 
 ## Requirements
 
-- macOS 14.0+ (Sonoma or later)
-- Python 3.11+
-- Node.js 18+
-- OpenAI API key
+- macOS 12.0+ (Monterey or later)
+- OpenAI API key ([get one here](https://platform.openai.com/api-keys))
 
 ### Permissions Required
 
-| Permission | Purpose |
-|------------|---------|
-| Screen Recording | Capture screenshots |
-| Accessibility | Read window titles |
-| Location Services | Track location (optional) |
-| Automation | Read browser URLs |
+| Permission | Purpose | Required |
+|------------|---------|----------|
+| Screen Recording | Capture screenshots | Yes |
+| Accessibility | Read window titles and active app | Yes |
+| Location Services | Add location context to notes | No (optional) |
+| Automation | Read browser URLs from Safari/Chrome | No (optional) |
 
 ---
 
-## Installation
+## Download
+
+### macOS
+
+1. **Download** the latest `.dmg` from [GitHub Releases](https://github.com/junkim100/Trace/releases):
+   - **Apple Silicon** (M1/M2/M3/M4): `Trace-x.x.x-arm64.dmg`
+   - **Intel Macs**: `Trace-x.x.x-x64.dmg`
+
+2. **Install** - Open the DMG and drag Trace to your Applications folder
+
+3. **First Launch** (important for unsigned apps):
+   - Right-click (or Control-click) on Trace in Applications
+   - Click **"Open"**
+   - Click **"Open"** again in the security dialog
+   - *This is only needed once*
+
+4. **Grant Permissions** when prompted:
+   - **Screen Recording** - Click "Open System Settings" and enable Trace
+   - **Accessibility** - Enable Trace in Privacy & Security settings
+   - **Location Services** - Optional, enable if you want location in your notes
+
+5. **Configure** - Set your OpenAI API key in the app's Settings
+
+### Troubleshooting
+
+**"Trace is damaged and can't be opened"**
+```bash
+xattr -cr /Applications/Trace.app
+```
+Then try opening again.
+
+**Permissions not working**
+1. Quit Trace completely
+2. Go to System Settings → Privacy & Security
+3. Remove Trace from the permission list
+4. Reopen Trace and grant permissions again
+
+**App won't start**
+Check the logs at `~/Library/Application Support/Trace/logs/`
+
+---
+
+## Development Setup
+
+> For contributors and developers only. Regular users should use the [Download](#download) section above.
 
 ### Prerequisites
+
+- Python 3.11+
+- Node.js 18+
+- [uv](https://github.com/astral-sh/uv) package manager
 
 ```bash
 # Install uv (Python package manager)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install Node.js dependencies
-cd electron && npm install
-```
-
-### Setup
-
-```bash
 # Clone the repository
 git clone https://github.com/junkim100/Trace.git
 cd Trace
 
-# Create Python environment
+# Install Python dependencies
 uv sync
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
+# Install Node.js dependencies
+cd electron && npm install
 ```
 
-### Running
+### Running in Development
 
 ```bash
-# Start the Electron app (includes all services)
+# Start the Electron app (includes Python backend)
 cd electron && npm start
 
-# Or run Python services directly
-uv run python -m src.core.services start
+# Or run Python backend separately
+uv run python -m src.trace_app.cli serve
+```
+
+### Building for Distribution
+
+```bash
+# Build Python backend with PyInstaller
+./build-python.sh
+
+# Build Electron app
+cd electron && npm run build && npx electron-builder --mac
 ```
 
 ---
@@ -142,8 +190,10 @@ uv run python -m src.core.services start
 
 ### Data Storage
 
+All data is stored locally in `~/Library/Application Support/Trace/`:
+
 ```
-Trace/
+~/Library/Application Support/Trace/
 ├── notes/YYYY/MM/DD/           # Durable Markdown notes
 │   ├── hour-YYYYMMDD-HH.md     # Hourly summaries
 │   └── day-YYYYMMDD.md         # Daily summaries
@@ -152,6 +202,7 @@ Trace/
 │   ├── screenshots/            # Raw screenshots
 │   ├── text_buffers/           # Extracted text
 │   └── ocr/                    # OCR results
+├── logs/                       # Application logs
 └── index/                      # Vector index (if external)
 ```
 
@@ -215,8 +266,11 @@ uv run ruff format src/
 ### CLI Commands
 
 ```bash
-# Capture daemon
-uv run python -m src.capture.daemon start
+# Start all services (capture, scheduler)
+uv run python -m src.trace_app.cli serve
+
+# Check service status
+uv run python -m src.core.services status
 
 # Manual hourly summarization
 uv run python -m src.jobs.hourly trigger --hour "2024-01-15 14:00"
@@ -224,11 +278,8 @@ uv run python -m src.jobs.hourly trigger --hour "2024-01-15 14:00"
 # Manual daily revision
 uv run python -m src.jobs.daily trigger --day "2024-01-15"
 
-# Chat query
+# Chat query (CLI)
 uv run python -m src.chat.api chat "What did I work on yesterday?"
-
-# Service health
-uv run python -m src.core.services status
 ```
 
 ---

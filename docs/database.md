@@ -27,12 +27,12 @@ Trace uses a single SQLite database (`db/trace.sqlite`) with the sqlite-vec exte
 │  embedding_id   │───────────────────────────────────────┐  │
 └─────────────────┘                                       │  │
                                                           │  │
-┌─────────────────┐       ┌─────────────────┐            │  │
-│     edges       │       │   embeddings    │◀───────────┘  │
-│                 │       │                 │               │
-│  from_id (PK)   │◀──────│ embedding_id(PK)│               │
-│  to_id (PK)     │◀──────│ source_type     │               │
-│  edge_type (PK) │       │ source_id       │◀──────────────┘
+┌─────────────────┐       ┌─────────────────┐             │  │
+│     edges       │       │   embeddings    │◀──────────-─┘  │
+│                 │       │                 │                │
+│  from_id (PK)   │◀──────│ embedding_id(PK)│                │
+│  to_id (PK)     │◀──────│ source_type     │                │
+│  edge_type (PK) │       │ source_id       │◀──────────────-┘
 │  weight         │       │ model_name      │
 │  evidence_notes │       │ dimensions      │
 └─────────────────┘       └─────────────────┘

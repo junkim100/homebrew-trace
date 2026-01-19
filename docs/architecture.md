@@ -2,59 +2,61 @@
 
 This document describes the high-level architecture of Trace, a macOS application that continuously observes digital activity and converts it into searchable knowledge.
 
+> **Data Location**: All user data is stored in `~/Library/Application Support/Trace/` on macOS.
+
 ## System Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                           TRACE ARCHITECTURE                             │
+│                           TRACE ARCHITECTURE                            │
 ├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
+│                                                                         │
 │  ┌──────────────────────────────────────────────────────────────────┐   │
 │  │                    ELECTRON DESKTOP APP                          │   │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐           │   │
-│  │  │   React UI   │  │  Chat View   │  │  Settings    │           │   │
-│  │  └──────────────┘  └──────────────┘  └──────────────┘           │   │
-│  │                              │                                    │   │
-│  │                    IPC (subprocess)                               │   │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │   │
+│  │  │   React UI   │  │  Chat View   │  │  Settings    │            │   │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘            │   │
+│  │                              │                                   │   │
+│  │                    IPC (subprocess)                              │   │
 │  └──────────────────────────────┼───────────────────────────────────┘   │
-│                                 │                                        │
+│                                 │                                       │
 │  ┌──────────────────────────────▼───────────────────────────────────┐   │
-│  │                     PYTHON BACKEND                                │   │
-│  │                                                                   │   │
+│  │                     PYTHON BACKEND                               │   │
+│  │                                                                  │   │
 │  │  ┌─────────────────────────────────────────────────────────────┐ │   │
-│  │  │                   SERVICE MANAGER                            │ │   │
-│  │  │  - Auto-start all services                                   │ │   │
-│  │  │  - Health monitoring & restart                               │ │   │
-│  │  │  - Sleep/wake detection                                      │ │   │
-│  │  │  - Backfill coordination                                     │ │   │
+│  │  │                   SERVICE MANAGER                           │ │   │
+│  │  │  - Auto-start all services                                  │ │   │
+│  │  │  - Health monitoring & restart                              │ │   │
+│  │  │  - Sleep/wake detection                                     │ │   │
+│  │  │  - Backfill coordination                                    │ │   │
 │  │  └─────────────────────────────────────────────────────────────┘ │   │
-│  │                                                                   │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │   │
-│  │  │   CAPTURE   │  │   HOURLY    │  │    DAILY    │              │   │
-│  │  │   DAEMON    │  │  SCHEDULER  │  │  SCHEDULER  │              │   │
-│  │  │  (1 sec)    │  │   (1 hr)    │  │   (3 AM)    │              │   │
-│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘              │   │
-│  │         │                │                │                       │   │
-│  │         ▼                ▼                ▼                       │   │
+│  │                                                                  │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐               │   │
+│  │  │   CAPTURE   │  │   HOURLY    │  │    DAILY    │               │   │
+│  │  │   DAEMON    │  │  SCHEDULER  │  │  SCHEDULER  │               │   │
+│  │  │  (1 sec)    │  │   (1 hr)    │  │   (3 AM)    │               │   │
+│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘               │   │
+│  │         │                │                │                      │   │
+│  │         ▼                ▼                ▼                      │   │
 │  │  ┌─────────────────────────────────────────────────────────────┐ │   │
-│  │  │                    CHAT API                                  │ │   │
-│  │  │  - Query classification                                      │ │   │
-│  │  │  - Agentic planning                                          │ │   │
-│  │  │  - Answer synthesis                                          │ │   │
+│  │  │                    CHAT API                                 │ │   │
+│  │  │  - Query classification                                     │ │   │
+│  │  │  - Agentic planning                                         │ │   │
+│  │  │  - Answer synthesis                                         │ │   │
 │  │  └─────────────────────────────────────────────────────────────┘ │   │
-│  └───────────────────────────────────────────────────────────────────┘   │
-│                                 │                                        │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                 │                                       │
 │  ┌──────────────────────────────▼───────────────────────────────────┐   │
-│  │                       DATA LAYER                                  │   │
-│  │                                                                   │   │
-│  │  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐        │   │
-│  │  │    SQLite     │  │   Markdown    │  │     Cache     │        │   │
-│  │  │  (metadata,   │  │    Notes      │  │ (screenshots, │        │   │
-│  │  │   graph,      │  │  (durable)    │  │  text, temp)  │        │   │
-│  │  │  embeddings)  │  │               │  │               │        │   │
-│  │  └───────────────┘  └───────────────┘  └───────────────┘        │   │
-│  └───────────────────────────────────────────────────────────────────┘   │
-│                                                                          │
+│  │                       DATA LAYER                                 │   │
+│  │                                                                  │   │
+│  │  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐         │   │
+│  │  │    SQLite     │  │   Markdown    │  │     Cache     │         │   │
+│  │  │  (metadata,   │  │    Notes      │  │ (screenshots, │         │   │
+│  │  │   graph,      │  │  (durable)    │  │  text, temp)  │         │   │
+│  │  │  embeddings)  │  │               │  │               │         │   │
+│  │  └───────────────┘  └───────────────┘  └───────────────┘         │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -159,24 +161,24 @@ Handles natural language queries with intelligent routing:
 User Query
     │
     ▼
-┌─────────────────┐
-│ Query Classifier│ ─── Simple ──▶ Direct Handlers
-└─────────────────┘                (aggregates, entity, timeline, semantic)
+┌─────-────────────┐
+│ Query Classifier │ ─── Simple ──▶ Direct Handlers
+└────-─────────────┘                (aggregates, entity, timeline, semantic)
     │ Complex
     ▼
-┌─────────────────┐
-│  Query Planner  │ ─── LLM generates QueryPlan
-└─────────────────┘
+┌─────-────────────┐
+│  Query Planner   │ ─── LLM generates QueryPlan
+└────-─────────────┘
     │
     ▼
-┌─────────────────┐
-│ Plan Executor   │ ─── Execute steps (parallel where possible)
-└─────────────────┘
+┌─────-────────────┐
+│ Plan Executor    │ ─── Execute steps (parallel where possible)
+└────-─────────────┘
     │
     ▼
-┌─────────────────┐
+┌─────────────────-┐
 │Answer Synthesizer│ ─── Generate answer with citations
-└─────────────────┘
+└─────────────────-┘
 ```
 
 **Query Types:**
