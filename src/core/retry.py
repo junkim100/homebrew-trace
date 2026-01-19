@@ -5,6 +5,7 @@ P9-04: Error handling & retry logic
 Provides exponential backoff retry for LLM failures and transient errors.
 """
 
+import dataclasses
 import functools
 import logging
 import random
@@ -160,6 +161,9 @@ def retry_with_backoff(
     # Build config from parameters
     if config is None:
         config = RetryConfig()
+    else:
+        # Create a copy to avoid mutating shared configs
+        config = dataclasses.replace(config)
 
     if max_retries is not None:
         config.max_retries = max_retries

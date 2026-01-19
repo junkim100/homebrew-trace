@@ -140,9 +140,13 @@ class ColoredConsoleFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """Format a log record with optional colors."""
         if self.use_colors:
+            original_levelname = record.levelname
             color = self.COLORS.get(record.levelno, "")
             record.levelname = f"{color}{record.levelname}{self.RESET}"
-
+            try:
+                return super().format(record)
+            finally:
+                record.levelname = original_levelname
         return super().format(record)
 
 
