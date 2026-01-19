@@ -284,12 +284,22 @@ class HourlySummarizer:
                 except (ValueError, TypeError):
                     continue
 
+                # Ensure diff_score is a float
+                diff_score_val = row["diff_score"]
+                if diff_score_val is None:
+                    diff_score_val = 0.0
+                elif not isinstance(diff_score_val, (int, float)):
+                    try:
+                        diff_score_val = float(diff_score_val)
+                    except (ValueError, TypeError):
+                        diff_score_val = 0.0
+
                 candidate = ScreenshotCandidate(
                     screenshot_id=row["screenshot_id"],
                     screenshot_path=Path(row["path"]),
                     timestamp=timestamp,
                     monitor_id=row["monitor_id"],
-                    diff_score=row["diff_score"] or 0.0,
+                    diff_score=float(diff_score_val),
                     fingerprint=row["fingerprint"] or "",
                     app_id=row["app_id"],
                     app_name=row["app_name"],
@@ -304,7 +314,7 @@ class HourlySummarizer:
                         timestamp=timestamp,
                         app_id=row["app_id"],
                         window_title=row["window_title"],
-                        diff_score=row["diff_score"] or 0.5,
+                        diff_score=float(diff_score_val) if diff_score_val else 0.5,
                     )
                     candidate.triage_result = triage_result
 
@@ -333,8 +343,7 @@ class HourlySummarizer:
             response = client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                max_tokens=4096,
-                temperature=0.3,
+                max_completion_tokens=4096,
                 response_format={"type": "json_object"},
             )
 

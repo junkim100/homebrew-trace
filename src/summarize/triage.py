@@ -170,8 +170,7 @@ class FrameTriager:
                     {"role": "system", "content": TRIAGE_SYSTEM_PROMPT},
                     {"role": "user", "content": user_content},
                 ],
-                max_tokens=256,
-                temperature=0,
+                max_completion_tokens=256,
                 response_format={"type": "json_object"},
             )
 

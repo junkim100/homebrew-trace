@@ -2,9 +2,6 @@
 Tests for macOS permission management.
 """
 
-import sys
-from unittest import mock
-
 import pytest
 
 from src.platform.permissions import (
