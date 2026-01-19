@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, systemPreferences, shell, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
 const readline = require('readline');
 
@@ -12,14 +13,40 @@ let tray = null;
 
 // Get the path to the Python executable
 function getPythonPath() {
-  // For now, always use uv run from the project root
-  // In a production build, we would bundle Python or use a different strategy
-  // The project root is one level up from the electron directory
-  const projectRoot = path.join(__dirname, '..');
+  let projectRoot;
+  const homeDir = app.getPath('home');
+
+  if (app.isPackaged) {
+    // When packaged, the project root is determined by:
+    // 1. TRACE_PROJECT_ROOT environment variable (if set)
+    // 2. Default to the user's home directory + /Trace
+    projectRoot = process.env.TRACE_PROJECT_ROOT || path.join(homeDir, 'Trace');
+  } else {
+    // In development, project root is one level up from the electron directory
+    projectRoot = path.join(__dirname, '..');
+  }
+
+  // When launched from app icon, PATH may not include ~/.local/bin
+  // Try to find uv in common locations
+  const uvPaths = [
+    path.join(homeDir, '.local', 'bin', 'uv'),
+    path.join(homeDir, '.cargo', 'bin', 'uv'),
+    '/usr/local/bin/uv',
+    '/opt/homebrew/bin/uv',
+    'uv', // fallback to PATH
+  ];
+
+  let uvCommand = 'uv';
+  for (const uvPath of uvPaths) {
+    if (uvPath !== 'uv' && fs.existsSync(uvPath)) {
+      uvCommand = uvPath;
+      break;
+    }
+  }
 
   return {
-    command: 'uv',
-    args: ['run', 'trace', 'serve'],
+    command: uvCommand,
+    args: ['run', 'python', '-m', 'src.trace_app.cli', 'serve'],
     cwd: projectRoot,
   };
 }
@@ -29,10 +56,37 @@ function startPythonBackend() {
 
   console.log(`Starting Python backend: ${command} ${args.join(' ')} in ${cwd}`);
 
+  // Check if project directory exists
+  if (!fs.existsSync(cwd)) {
+    console.error(`Project directory not found: ${cwd}`);
+    dialog.showMessageBox({
+      type: 'error',
+      title: 'Project Not Found',
+      message: 'Could not find the Trace project directory.',
+      detail: `Expected location: ${cwd}\n\nMake sure the Trace project is installed at this location.`,
+      buttons: ['OK'],
+    });
+    return;
+  }
+
+  // Check if pyproject.toml exists (indicates a valid project)
+  const pyprojectPath = path.join(cwd, 'pyproject.toml');
+  if (!fs.existsSync(pyprojectPath)) {
+    console.error(`pyproject.toml not found in: ${cwd}`);
+    dialog.showMessageBox({
+      type: 'error',
+      title: 'Invalid Project',
+      message: 'The Trace project directory is missing pyproject.toml.',
+      detail: `Location: ${cwd}\n\nThis doesn't appear to be a valid Trace project.`,
+      buttons: ['OK'],
+    });
+    return;
+  }
+
   pythonProcess = spawn(command, args, {
     cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env, PYTHONUNBUFFERED: '1' },
+    env: { ...process.env, PYTHONUNBUFFERED: '1', PYTHONPATH: cwd },
   });
 
   // Create readline interface for reading JSON lines from stdout
@@ -77,6 +131,15 @@ function startPythonBackend() {
   pythonProcess.on('error', (err) => {
     console.error('Failed to start Python backend:', err);
     pythonReady = false;
+
+    // Show error dialog to user
+    dialog.showMessageBox({
+      type: 'error',
+      title: 'Backend Error',
+      message: 'Failed to start the Python backend.',
+      detail: `Error: ${err.message}\n\nMake sure 'uv' is installed and the Trace project is at ~/Trace`,
+      buttons: ['OK'],
+    });
   });
 
   pythonProcess.on('exit', (code, signal) => {
@@ -153,14 +216,28 @@ function createWindow() {
     vibrancy: 'under-window',
     visualEffectState: 'active',
     show: false,
+    // macOS features
+    fullscreenable: true,
+    simpleFullscreen: false, // Use native macOS fullscreen
   });
 
   // Load the app
+  const indexPath = path.join(__dirname, 'dist', 'index.html');
+  console.log(`Loading app from: ${indexPath}`);
+  console.log(`__dirname: ${__dirname}`);
+  console.log(`app.isPackaged: ${app.isPackaged}`);
+
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
+    mainWindow.loadFile(indexPath).catch(err => {
+      console.error(`Failed to load index.html: ${err}`);
+    });
+  }
+
+  // Open DevTools only in development
+  if (process.env.NODE_ENV === 'development') {
+    mainWindow.webContents.openDevTools();
   }
 
   // Show window when ready to prevent visual flash
@@ -168,26 +245,80 @@ function createWindow() {
     mainWindow.show();
   });
 
+  // On macOS, hide window instead of closing when clicking red button
+  mainWindow.on('close', (event) => {
+    if (process.platform === 'darwin' && !app.isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
 
+// Check and request permissions on startup
+async function checkAndRequestPermissions() {
+  const screenStatus = systemPreferences.getMediaAccessStatus('screen');
+  const accessibilityStatus = systemPreferences.isTrustedAccessibilityClient(false);
+
+  console.log('Startup permission check - Screen:', screenStatus, 'Accessibility:', accessibilityStatus);
+
+  // Request accessibility permission if not granted (shows system prompt)
+  if (!accessibilityStatus) {
+    console.log('Requesting accessibility permission on startup...');
+    // This will show the macOS system prompt for accessibility
+    systemPreferences.isTrustedAccessibilityClient(true);
+  }
+
+  // For screen recording, we can't request programmatically - show a dialog
+  if (screenStatus !== 'granted') {
+    console.log('Screen recording not granted - prompting user');
+    const result = await dialog.showMessageBox({
+      type: 'info',
+      title: 'Screen Recording Permission Required',
+      message: 'Trace needs Screen Recording permission to capture screenshots of your activity.',
+      detail: 'Click "Open System Settings" to enable this permission, then restart Trace.',
+      buttons: ['Open System Settings', 'Later'],
+      defaultId: 0,
+      cancelId: 1,
+    });
+
+    if (result.response === 0) {
+      // User clicked "Open System Settings"
+      shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+    }
+  }
+
+  return {
+    screen_recording: screenStatus === 'granted',
+    accessibility: accessibilityStatus,
+  };
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Start Python backend before creating window
   startPythonBackend();
 
   // Create system tray
   createTray();
 
+  // Check and request permissions on startup
+  const permissions = await checkAndRequestPermissions();
+  console.log('Startup permissions:', permissions);
+
   createWindow();
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+    } else {
       createWindow();
     }
   });
@@ -201,6 +332,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  app.isQuitting = true;
   stopPythonBackend();
 });
 
@@ -244,6 +376,72 @@ ipcMain.handle('window:maximize', () => {
 
 ipcMain.handle('window:close', () => {
   if (mainWindow) mainWindow.close();
+});
+
+// Native permission handlers (these run in the Electron main process)
+ipcMain.handle('permissions:check', async () => {
+  const screenStatus = systemPreferences.getMediaAccessStatus('screen');
+  const accessibilityStatus = systemPreferences.isTrustedAccessibilityClient(false);
+
+  console.log('Permission check - Screen:', screenStatus, 'Accessibility:', accessibilityStatus);
+
+  return {
+    screen_recording: {
+      permission: 'screen_recording',
+      status: screenStatus === 'granted' ? 'granted' : 'denied',
+      required: true,
+      can_request: false, // Screen recording can't be requested programmatically
+    },
+    accessibility: {
+      permission: 'accessibility',
+      status: accessibilityStatus ? 'granted' : 'denied',
+      required: true,
+      can_request: true,
+    },
+    location: {
+      permission: 'location',
+      status: 'not_determined', // Will be determined when requested
+      required: false,
+      can_request: false, // Requires code-signed app
+    },
+    all_granted: screenStatus === 'granted' && accessibilityStatus,
+    requires_restart: false,
+  };
+});
+
+ipcMain.handle('permissions:requestAccessibility', async () => {
+  console.log('Requesting accessibility permission...');
+  // This will show the system prompt for accessibility
+  const result = systemPreferences.isTrustedAccessibilityClient(true);
+  console.log('Accessibility request result:', result);
+  return { success: true, granted: result };
+});
+
+ipcMain.handle('permissions:requestScreenRecording', async () => {
+  // Screen recording can't be requested - open System Settings instead
+  await shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+  return { success: true, opened: true };
+});
+
+ipcMain.handle('permissions:requestLocation', async () => {
+  // Location permission is requested via the renderer process using navigator.geolocation
+  // This handler just returns that the request should be made from renderer
+  return { success: true, useRenderer: true };
+});
+
+ipcMain.handle('permissions:openSettings', async (event, permission) => {
+  const urls = {
+    screen_recording: 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture',
+    accessibility: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility',
+    location: 'x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices',
+  };
+
+  const url = urls[permission];
+  if (url) {
+    await shell.openExternal(url);
+    return { success: true };
+  }
+  return { success: false, error: 'Unknown permission' };
 });
 
 // Create system tray

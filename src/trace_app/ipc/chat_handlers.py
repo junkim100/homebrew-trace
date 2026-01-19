@@ -9,7 +9,7 @@ from typing import Any
 
 from src.chat.api import ChatAPI, ChatRequest
 from src.core.paths import NOTES_DIR
-from trace_app.ipc.server import handler
+from src.trace_app.ipc.server import handler
 
 logger = logging.getLogger(__name__)
 
@@ -66,9 +66,16 @@ def handle_read_note(params: dict[str, Any]) -> dict[str, Any]:
     Returns:
         {"content": str, "path": str} or {"error": str}
     """
+    import re
+
     note_id = params.get("note_id")
     if not note_id:
         raise ValueError("note_id parameter is required")
+
+    # Validate note_id format to prevent path traversal attacks
+    # Must match YYYYMMDD-HH (hourly) or YYYYMMDD (daily)
+    if not re.match(r"^\d{8}(-\d{2})?$", note_id):
+        raise ValueError(f"Invalid note_id format: {note_id}")
 
     # Parse note_id to find the file
     # Format: YYYYMMDD-HH for hourly, YYYYMMDD for daily
@@ -79,6 +86,9 @@ def handle_read_note(params: dict[str, Any]) -> dict[str, Any]:
             year = date_part[:4]
             month = date_part[4:6]
             day = date_part[6:8]
+            # Validate hour is 00-23
+            if not (0 <= int(hour) <= 23):
+                raise ValueError(f"Invalid hour in note_id: {hour}")
             filename = f"hour-{note_id}.md"
         else:
             # Daily note: YYYYMMDD
@@ -87,7 +97,20 @@ def handle_read_note(params: dict[str, Any]) -> dict[str, Any]:
             day = note_id[6:8]
             filename = f"day-{note_id}.md"
 
+        # Validate date components are reasonable
+        if not (1 <= int(month) <= 12) or not (1 <= int(day) <= 31):
+            raise ValueError(f"Invalid date in note_id: {note_id}")
+
         note_path = NOTES_DIR / year / month / day / filename
+
+        # Security: Ensure the resolved path is within NOTES_DIR to prevent path traversal
+        try:
+            resolved_path = note_path.resolve()
+            notes_dir_resolved = NOTES_DIR.resolve()
+            if not str(resolved_path).startswith(str(notes_dir_resolved)):
+                raise ValueError(f"Invalid note path: {note_id}")
+        except (OSError, RuntimeError) as e:
+            raise ValueError(f"Invalid note path: {note_id}") from e
 
         if not note_path.exists():
             raise FileNotFoundError(f"Note not found: {note_id}")
@@ -199,10 +222,23 @@ def handle_set_api_key(params: dict[str, Any]) -> dict[str, Any]:
         {"success": bool}
     """
     import os
+    import re
 
     api_key = params.get("api_key")
     if not api_key:
         raise ValueError("api_key parameter is required")
+
+    # Validate API key format (OpenAI keys start with sk- and are alphanumeric)
+    # This prevents injection of malicious values
+    if not isinstance(api_key, str):
+        raise ValueError("api_key must be a string")
+
+    api_key = api_key.strip()
+
+    # OpenAI API keys follow the pattern: sk-[alphanumeric, 48+ chars]
+    # or sk-proj-[alphanumeric] for project keys
+    if not re.match(r"^sk-(?:proj-)?[A-Za-z0-9_-]{20,}$", api_key):
+        raise ValueError("Invalid API key format")
 
     # Set in environment for current process
     os.environ["OPENAI_API_KEY"] = api_key

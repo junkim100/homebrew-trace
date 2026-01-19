@@ -366,20 +366,24 @@ class ChatAPI:
         if request.include_graph_expansion and notes:
             # Extract entity IDs from notes
             entity_ids = []
-            for note in notes[:3]:  # Expand from top 3 notes
-                for entity in note.entities:
-                    # Get entity ID from database
-                    entity_name = entity.get("name", "")
-                    entity_type = entity.get("type", "")
-                    if entity_name:
-                        # Find entity ID
-                        ids = self._expander._find_entity_ids_by_name(
-                            self._get_connection(),
-                            entity_name,
-                            entity_type,
-                        )
-                        entity_ids.extend(ids)
-                        self._close_connection()
+            conn = None
+            try:
+                conn = self._get_connection()
+                for note in notes[:3]:  # Expand from top 3 notes
+                    for entity in note.entities:
+                        # Get entity ID from database
+                        entity_name = entity.get("name", "")
+                        entity_type = entity.get("type", "")
+                        if entity_name:
+                            # Find entity ID using GraphExpander's internal method
+                            ids = self._expander._find_entity_ids_by_name(
+                                conn,
+                                entity_name,
+                                entity_type,
+                            )
+                            entity_ids.extend(ids)
+            finally:
+                self._close_connection()
 
             if entity_ids:
                 expansion = self._expander.expand_from_entities(

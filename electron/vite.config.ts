@@ -8,6 +8,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    assetsInlineLimit: 500000, // Inline assets under 500KB as base64
   },
   resolve: {
     alias: {

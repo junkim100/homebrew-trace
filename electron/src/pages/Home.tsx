@@ -74,7 +74,7 @@ function Home() {
     <div style={styles.container}>
       <div className="titlebar" />
       <main style={styles.main}>
-        <h1 style={styles.title}>Trace</h1>
+        <h1 style={styles.logoText}>TRACE</h1>
         <p style={styles.subtitle}>
           Your digital activity, organized and searchable.
         </p>
@@ -160,13 +160,15 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     padding: '2rem',
   },
-  title: {
+  logoText: {
     fontSize: '3rem',
     fontWeight: 700,
+    letterSpacing: '0.15em',
     marginBottom: '0.5rem',
-    background: 'linear-gradient(135deg, #007aff, #00d4ff)',
+    background: 'linear-gradient(135deg, #00d4ff 0%, #7b68ee 50%, #ff6b9d 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
   },
   subtitle: {
     fontSize: '1.25rem',

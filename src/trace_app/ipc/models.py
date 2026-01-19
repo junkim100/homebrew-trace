@@ -45,3 +45,6 @@ class BackendStatus(BaseModel):
     running: bool = Field(default=True, description="Whether the backend is running")
     uptime_seconds: float = Field(..., description="Seconds since backend started")
     python_version: str = Field(..., description="Python version")
+    capture_stats: dict[str, Any] | None = Field(
+        default=None, description="Capture daemon statistics"
+    )
