@@ -107,7 +107,7 @@ def handle_read_note(params: dict[str, Any]) -> dict[str, Any]:
         resolved_path = note_path.resolve()
         notes_dir_resolved = NOTES_DIR.resolve()
         if not resolved_path.is_relative_to(notes_dir_resolved):
-            raise ValueError(f"Invalid note_id: path traversal detected")
+            raise ValueError("Invalid note_id: path traversal detected")
 
         if not note_path.exists():
             raise FileNotFoundError(f"Note not found: {note_id}")

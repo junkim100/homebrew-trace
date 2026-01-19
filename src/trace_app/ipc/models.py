@@ -19,6 +19,11 @@ class IPCMethod(str, Enum):
     PERMISSIONS_OPEN_SETTINGS = "permissions.open_settings"
     PERMISSIONS_REQUEST_ACCESSIBILITY = "permissions.request_accessibility"
     PERMISSIONS_REQUEST_LOCATION = "permissions.request_location"
+    # Service management methods
+    SERVICES_GET_HEALTH = "services.get_health"
+    SERVICES_RESTART = "services.restart"
+    SERVICES_TRIGGER_BACKFILL = "services.trigger_backfill"
+    SERVICES_CHECK_MISSING = "services.check_missing"
 
 
 class IPCRequest(BaseModel):
@@ -47,4 +52,7 @@ class BackendStatus(BaseModel):
     python_version: str = Field(..., description="Python version")
     capture_stats: dict[str, Any] | None = Field(
         default=None, description="Capture daemon statistics"
+    )
+    service_health: dict[str, Any] | None = Field(
+        default=None, description="Health status of all services"
     )
