@@ -130,7 +130,7 @@ jobs:
       - name: Package for macOS
         working-directory: electron
         run: |
-          npx electron-builder --mac --${{ matrix.arch }}
+          npx electron-builder --mac --${{ matrix.arch }} --config ../electron-builder.yml
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Disable code signing for now
