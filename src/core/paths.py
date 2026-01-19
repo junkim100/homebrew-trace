@@ -267,10 +267,15 @@ def migrate_legacy_data(dry_run: bool = True) -> dict[str, list[str]]:
                     # Ensure parent directory exists
                     dst.parent.mkdir(parents=True, exist_ok=True)
 
-                    # Move the directory
-                    shutil.move(str(src), str(dst))
-                    migrated.append(f"Migrated {name}: {src} -> {dst}")
-                    logger.info(f"Migrated {name} from {src} to {dst}")
+                    # Check if destination already exists
+                    if dst.exists():
+                        errors.append(f"Cannot migrate {name}: destination {dst} already exists")
+                        logger.error(f"Cannot migrate {name}: destination {dst} already exists")
+                    else:
+                        # Move the directory
+                        shutil.move(str(src), str(dst))
+                        migrated.append(f"Migrated {name}: {src} -> {dst}")
+                        logger.info(f"Migrated {name} from {src} to {dst}")
                 except Exception as e:
                     errors.append(f"Failed to migrate {name}: {e}")
                     logger.error(f"Failed to migrate {name}: {e}")
