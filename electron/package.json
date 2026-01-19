@@ -10,6 +10,7 @@
     "build": "vite build",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",
+    "app": "npm run build && npm run pack && open release/mac/Trace.app",
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit"
   },
@@ -40,20 +41,30 @@
   "build": {
     "appId": "com.trace.app",
     "productName": "Trace",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
     "mac": {
       "category": "public.app-category.productivity",
-      "target": ["dmg", "zip"],
-      "hardenedRuntime": true,
+      "target": ["dir"],
+      "hardenedRuntime": false,
       "entitlements": "entitlements.mac.plist",
-      "entitlementsInherit": "entitlements.mac.plist"
+      "entitlementsInherit": "entitlements.mac.plist",
+      "icon": "build/icon.icns",
+      "extendInfo": {
+        "NSScreenCaptureUsageDescription": "Trace needs screen recording permission to capture screenshots of your activity.",
+        "NSAccessibilityUsageDescription": "Trace needs accessibility permission to detect which app and window you are using.",
+        "NSLocationWhenInUseUsageDescription": "Trace uses your location to add context to your activity notes.",
+        "NSLocationUsageDescription": "Trace uses your location to add context to your activity notes.",
+        "NSAppleEventsUsageDescription": "Trace needs automation permission to get information about running applications."
+      }
     },
+    "asar": true,
     "files": [
       "main.js",
       "preload.js",
       "dist/**/*"
-    ],
-    "directories": {
-      "output": "release"
-    }
+    ]
   }
 }

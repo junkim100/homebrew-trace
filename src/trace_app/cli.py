@@ -2,7 +2,7 @@
 
 import fire
 
-from trace_app.ipc.server import run_server
+from src.trace_app.ipc.server import run_server
 
 
 class TraceCLI:

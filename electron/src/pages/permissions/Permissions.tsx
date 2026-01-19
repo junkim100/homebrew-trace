@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type {
   AllPermissionsState,
   PermissionType,
@@ -77,7 +78,7 @@ function PermissionCard({
           >
             Open System Settings
           </button>
-          {onRequest && permission.status === 'not_determined' && (
+          {onRequest && permission.can_request && (
             <button
               style={styles.secondaryButton}
               onClick={onRequest}
@@ -110,6 +111,7 @@ const ACTIVE_POLL_INTERVAL = 1000; // 1 second
 const IDLE_POLL_INTERVAL = 5000; // 5 seconds
 
 function Permissions() {
+  const navigate = useNavigate();
   const [permissionsState, setPermissionsState] = useState<AllPermissionsState | null>(null);
   const [instructions, setInstructions] = useState<Record<PermissionType, PermissionInstructions | null>>({
     screen_recording: null,
@@ -120,8 +122,6 @@ function Permissions() {
   const [error, setError] = useState<string | null>(null);
   const [pythonReady, setPythonReady] = useState(false);
   const [isActivelyWaiting, setIsActivelyWaiting] = useState(false);
-  // Track last check time for potential future use (value currently unused)
-  const [, setLastCheckTime] = useState<number>(0);
 
   const checkPermissions = useCallback(async (silent = false) => {
     if (!window.traceAPI?.permissions) return;
@@ -130,20 +130,7 @@ function Permissions() {
       if (!silent) setIsLoading(true);
       const state = await window.traceAPI.permissions.checkAll();
 
-      // Check if any permission status changed
-      if (permissionsState) {
-        const changed =
-          state.screen_recording.status !== permissionsState.screen_recording.status ||
-          state.accessibility.status !== permissionsState.accessibility.status ||
-          state.location.status !== permissionsState.location.status;
-
-        if (changed) {
-          console.log('Permission status changed, updating state');
-        }
-      }
-
       setPermissionsState(state);
-      setLastCheckTime(Date.now());
       setError(null);
 
       // If all permissions are now granted, stop active polling
@@ -157,7 +144,7 @@ function Permissions() {
     } finally {
       if (!silent) setIsLoading(false);
     }
-  }, [permissionsState]);
+  }, []);
 
   const loadInstructions = useCallback(async () => {
     if (!window.traceAPI?.permissions) return;
@@ -174,45 +161,45 @@ function Permissions() {
     }
   }, []);
 
-  // Check if Python backend is ready
+  // Check permissions and load instructions on mount
   useEffect(() => {
     if (!window.traceAPI) return;
+
+    checkPermissions();
+    loadInstructions();
+  }, [checkPermissions, loadInstructions]);
+
+  // Poll for Python backend readiness
+  useEffect(() => {
+    if (!window.traceAPI || pythonReady) return;
 
     const checkPython = async () => {
       try {
         const ready = await window.traceAPI.python.isReady();
-        setPythonReady(ready);
-        if (ready) {
-          checkPermissions();
-          loadInstructions();
-        }
-      } catch (err) {
-        console.error('Failed to check Python backend:', err);
+        if (ready) setPythonReady(true);
+      } catch {
+        // Ignore errors during polling
       }
     };
 
     checkPython();
-    const interval = setInterval(() => {
-      if (!pythonReady) {
-        checkPython();
-      }
-    }, 2000);
+    const interval = setInterval(checkPython, 2000);
 
     return () => clearInterval(interval);
-  }, [pythonReady, checkPermissions, loadInstructions]);
+  }, [pythonReady]);
 
   // Active polling when waiting for permission changes
   useEffect(() => {
-    if (!pythonReady || permissionsState?.all_granted) return;
+    if (permissionsState?.all_granted) return;
 
     const pollInterval = isActivelyWaiting ? ACTIVE_POLL_INTERVAL : IDLE_POLL_INTERVAL;
 
     const interval = setInterval(() => {
-      checkPermissions(true); // Silent check
+      checkPermissions(true);
     }, pollInterval);
 
     return () => clearInterval(interval);
-  }, [pythonReady, isActivelyWaiting, permissionsState?.all_granted, checkPermissions]);
+  }, [isActivelyWaiting, permissionsState?.all_granted, checkPermissions]);
 
   const handleOpenSettings = async (permission: PermissionType) => {
     if (!window.traceAPI?.permissions) return;
@@ -233,7 +220,6 @@ function Permissions() {
 
     try {
       await window.traceAPI.permissions.requestAccessibility();
-      // Start active polling
       setIsActivelyWaiting(true);
       setTimeout(() => checkPermissions(true), 500);
     } catch (err) {
@@ -246,7 +232,6 @@ function Permissions() {
 
     try {
       await window.traceAPI.permissions.requestLocation();
-      // Start active polling
       setIsActivelyWaiting(true);
       setTimeout(() => checkPermissions(true), 500);
     } catch (err) {
@@ -255,8 +240,8 @@ function Permissions() {
   };
 
   const handleContinue = () => {
-    // Navigate to home page
-    window.location.href = '/';
+    // Navigate to chat page using React Router
+    navigate('/chat');
   };
 
   if (!window.traceAPI) {
@@ -289,6 +274,7 @@ function Permissions() {
         <p style={styles.subtitle}>
           Trace needs some permissions to capture your digital activity.
         </p>
+
 
         {error && (
           <div style={styles.errorCard}>
@@ -574,6 +560,16 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#ff6b6b',
     fontSize: '0.875rem',
     margin: 0,
+  },
+  devNote: {
+    backgroundColor: '#2a2a3a',
+    borderRadius: '8px',
+    padding: '1rem',
+    marginBottom: '1.5rem',
+    fontSize: '0.875rem',
+    color: '#a0a0c0',
+    lineHeight: 1.5,
+    border: '1px solid #3a3a4a',
   },
 };
 

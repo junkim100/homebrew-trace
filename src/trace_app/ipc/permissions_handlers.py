@@ -16,7 +16,7 @@ from src.platform.permissions import (
     request_accessibility_permission,
     request_location_permission,
 )
-from trace_app.ipc.server import handler
+from src.trace_app.ipc.server import handler
 
 logger = logging.getLogger(__name__)
 

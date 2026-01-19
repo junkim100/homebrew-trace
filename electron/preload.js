@@ -23,30 +23,77 @@ contextBridge.exposeInMainWorld('traceAPI', {
     call: (method, params) => ipcRenderer.invoke('python:call', method, params),
   },
 
-  // Permission methods
+  // Permission methods (native - handled by Electron main process)
   permissions: {
-    // Check all permissions
-    checkAll: () => ipcRenderer.invoke('python:call', 'permissions.check_all', {}),
+    // Check all permissions (native)
+    checkAll: () => ipcRenderer.invoke('permissions:check'),
 
-    // Check a specific permission
-    check: (permission) =>
-      ipcRenderer.invoke('python:call', 'permissions.check', { permission }),
+    // Check a specific permission (uses native check)
+    check: (permission) => ipcRenderer.invoke('permissions:check').then(state => state[permission]),
 
     // Get instructions for a permission
-    getInstructions: (permission) =>
-      ipcRenderer.invoke('python:call', 'permissions.get_instructions', { permission }),
+    getInstructions: (permission) => {
+      const instructions = {
+        screen_recording: {
+          title: 'Screen Recording',
+          description: 'Trace needs screen recording permission to capture screenshots of your activity.',
+          steps: [
+            'Click "Open System Settings" below',
+            'Find Trace in the list and enable it',
+            'If Trace is not listed, click the + button and add it',
+            'Restart Trace after enabling the permission',
+          ],
+          requires_restart: true,
+        },
+        accessibility: {
+          title: 'Accessibility',
+          description: 'Trace needs accessibility permission to detect which app and window you are using.',
+          steps: [
+            'Click "Request Permission" to show the system prompt',
+            'Or click "Open System Settings" to enable manually',
+          ],
+          requires_restart: false,
+        },
+        location: {
+          title: 'Location Services (Optional)',
+          description: 'Trace can optionally capture your location to add context to your notes. Note: Location requires a code-signed app to work properly.',
+          steps: [
+            'This feature requires the app to be code-signed',
+            'You can skip this permission - the app works without it',
+          ],
+          requires_restart: false,
+        },
+      };
+      return Promise.resolve(instructions[permission] || {});
+    },
 
-    // Open system settings for a permission
-    openSettings: (permission) =>
-      ipcRenderer.invoke('python:call', 'permissions.open_settings', { permission }),
+    // Open system settings for a permission (native)
+    openSettings: (permission) => ipcRenderer.invoke('permissions:openSettings', permission),
 
-    // Request accessibility permission prompt
-    requestAccessibility: () =>
-      ipcRenderer.invoke('python:call', 'permissions.request_accessibility', {}),
+    // Request accessibility permission prompt (native - shows system dialog)
+    requestAccessibility: () => ipcRenderer.invoke('permissions:requestAccessibility'),
 
-    // Request location permission prompt
-    requestLocation: () =>
-      ipcRenderer.invoke('python:call', 'permissions.request_location', {}),
+    // Request location permission prompt (triggers via geolocation API)
+    requestLocation: async () => {
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          () => resolve({ success: true, granted: true }),
+          async (error) => {
+            // If denied, open System Settings for Location Services
+            if (error.code === error.PERMISSION_DENIED) {
+              await ipcRenderer.invoke('permissions:openSettings', 'location');
+              resolve({ success: true, granted: false, openedSettings: true });
+            } else {
+              resolve({ success: true, granted: false, error: error.message });
+            }
+          },
+          { timeout: 10000 }
+        );
+      });
+    },
+
+    // Request screen recording (just opens settings - can't be requested programmatically)
+    requestScreenRecording: () => ipcRenderer.invoke('permissions:requestScreenRecording'),
   },
 
   // Chat methods

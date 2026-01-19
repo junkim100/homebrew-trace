@@ -50,8 +50,9 @@ export function Chat() {
 
   return (
     <div style={styles.container}>
+      {/* Titlebar area for dragging - leaves space for traffic lights */}
       <div className="titlebar" style={styles.titlebar}>
-        <h1 style={styles.logo}>Trace</h1>
+        <div style={styles.titlebarSpacer} />
         <button
           onClick={() => navigate('/settings')}
           style={styles.settingsButton}
@@ -82,6 +83,11 @@ export function Chat() {
               onNoteClick={setSelectedNoteId}
               loading={loading}
             />
+          </div>
+
+          {/* Logo at bottom of sidebar */}
+          <div style={styles.sidebarFooter}>
+            <span style={styles.logoText}>TRACE</span>
           </div>
         </div>
 
@@ -119,16 +125,26 @@ const styles: Record<string, React.CSSProperties> = {
   },
   titlebar: {
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     padding: '0 1rem',
   },
-  logo: {
-    fontSize: '1rem',
-    fontWeight: 600,
-    background: 'linear-gradient(135deg, #007aff, #00d4ff)',
+  titlebarSpacer: {
+    flex: 1,
+  },
+  logoText: {
+    fontSize: '1.25rem',
+    fontWeight: 700,
+    letterSpacing: '0.15em',
+    background: 'linear-gradient(135deg, #00d4ff 0%, #7b68ee 50%, #ff6b9d 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  },
+  sidebarFooter: {
+    flexShrink: 0,
+    paddingTop: '1rem',
+    borderTop: '1px solid var(--border)',
   },
   settingsButton: {
     backgroundColor: 'transparent',
@@ -153,7 +169,6 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     padding: '1rem',
     gap: '1rem',
-    overflow: 'hidden',
   },
   filterSection: {
     flexShrink: 0,
@@ -171,6 +186,7 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: 0,
     display: 'flex',
     flexDirection: 'column',
+    overflow: 'auto',
   },
   content: {
     flex: 1,
