@@ -32,6 +32,7 @@ from src.platform.notifications import (
     send_error_notification,
     send_service_notification,
 )
+from src.platform.sleep_wake import SleepWakeDetector
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,7 @@ class ServiceManager:
         self._hourly_scheduler: HourlyJobScheduler | None = None
         self._daily_scheduler: DailyJobScheduler | None = None
         self._backfill_detector: BackfillDetector | None = None
+        self._sleep_wake_detector: SleepWakeDetector | None = None
 
         # Service status tracking
         self._services: dict[str, ServiceStatus] = {
@@ -139,6 +141,9 @@ class ServiceManager:
         # Start health monitor
         self._start_health_monitor()
 
+        # Start sleep/wake detector for immediate catch-up on wake
+        self._start_sleep_wake_detector()
+
         # Run initial backfill check (in background)
         self._schedule_backfill_check()
 
@@ -162,6 +167,9 @@ class ServiceManager:
         # Stop health monitor
         if self._health_thread and self._health_thread.is_alive():
             self._health_thread.join(timeout=5)
+
+        # Stop sleep/wake detector
+        self._stop_sleep_wake_detector()
 
         # Stop services in reverse order
         self._stop_daily()
@@ -471,6 +479,61 @@ class ServiceManager:
             name="backfill-check",
         )
         thread.start()
+
+    def _start_sleep_wake_detector(self) -> None:
+        """Start the sleep/wake detector for immediate catch-up on wake."""
+        try:
+            self._sleep_wake_detector = SleepWakeDetector()
+
+            # Register wake callback to trigger immediate backfill
+            self._sleep_wake_detector.add_wake_callback(self._on_system_wake)
+
+            # Register sleep callback for logging
+            self._sleep_wake_detector.add_sleep_callback(self._on_system_sleep)
+
+            if self._sleep_wake_detector.start():
+                logger.info("Sleep/wake detector started")
+            else:
+                logger.warning("Failed to start sleep/wake detector")
+        except Exception as e:
+            logger.error(f"Error starting sleep/wake detector: {e}")
+
+    def _stop_sleep_wake_detector(self) -> None:
+        """Stop the sleep/wake detector."""
+        if self._sleep_wake_detector:
+            self._sleep_wake_detector.stop()
+            self._sleep_wake_detector = None
+            logger.info("Sleep/wake detector stopped")
+
+    def _on_system_sleep(self, sleep_time: datetime) -> None:
+        """Handle system sleep event."""
+        logger.info(f"System going to sleep at {sleep_time}")
+        # Could pause capture daemon here if needed
+
+    def _on_system_wake(self, wake_time: datetime, sleep_duration: float) -> None:
+        """
+        Handle system wake event.
+
+        Triggers immediate backfill check to catch up on any missed
+        summarization windows while the system was sleeping.
+
+        Args:
+            wake_time: When the system woke up
+            sleep_duration: How long the system was asleep (seconds)
+        """
+        logger.info(f"System woke at {wake_time} after sleeping {sleep_duration:.1f}s")
+
+        # Only trigger backfill if we slept for more than 5 minutes
+        # (short sleeps probably didn't miss any hourly windows)
+        if sleep_duration > 300:  # 5 minutes
+            logger.info("Triggering immediate backfill check after wake")
+            send_service_notification(
+                "System Wake",
+                f"Checking for missed notes after {sleep_duration / 60:.0f}min sleep",
+            )
+            self._schedule_backfill_check()
+        else:
+            logger.debug(f"Short sleep ({sleep_duration:.0f}s), skipping backfill")
 
     def _run_backfill_check(self) -> None:
         """Run backfill check in background."""
