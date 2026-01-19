@@ -16,16 +16,29 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from src.capture.daemon import CaptureDaemon
+from src.core.services import ServiceManager
 from src.trace_app import __version__
 from src.trace_app.ipc.models import BackendStatus, IPCRequest, IPCResponse
 
 logger = logging.getLogger(__name__)
 
+
+# Import handlers to register them (must be after handler registry is defined)
+# These imports are done at module level to ensure handlers are registered
+def _register_handlers() -> None:
+    """Register all IPC handlers from handler modules."""
+    # Import handler modules to trigger @handler decorator registration
+    from src.trace_app.ipc import (  # noqa: F401
+        chat_handlers,
+        permissions_handlers,
+        service_handlers,
+    )
+
+
 # Global state for the server
 _start_time: float = 0.0
 _running: bool = False
-_capture_daemon: CaptureDaemon | None = None
+_service_manager: ServiceManager | None = None
 
 
 # Handler registry
@@ -52,15 +65,22 @@ def handle_ping(params: dict[str, Any]) -> str:
 def handle_get_status(params: dict[str, Any]) -> dict[str, Any]:
     """Return backend status information."""
     capture_stats = None
-    if _capture_daemon:
-        stats = _capture_daemon.get_stats()
-        capture_stats = {
-            "captures_total": stats.captures_total,
-            "screenshots_captured": stats.screenshots_captured,
-            "screenshots_deduplicated": stats.screenshots_deduplicated,
-            "events_created": stats.events_created,
-            "errors": stats.errors,
-        }
+    service_health = None
+
+    if _service_manager:
+        # Get capture stats if daemon is running
+        if _service_manager._capture_daemon:
+            stats = _service_manager._capture_daemon.get_stats()
+            capture_stats = {
+                "captures_total": stats.captures_total,
+                "screenshots_captured": stats.screenshots_captured,
+                "screenshots_deduplicated": stats.screenshots_deduplicated,
+                "events_created": stats.events_created,
+                "errors": stats.errors,
+            }
+
+        # Get service health
+        service_health = _service_manager.get_health_status()
 
     status = BackendStatus(
         version=__version__,
@@ -68,6 +88,7 @@ def handle_get_status(params: dict[str, Any]) -> dict[str, Any]:
         uptime_seconds=time.time() - _start_time,
         python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
         capture_stats=capture_stats,
+        service_health=service_health,
     )
     return status.model_dump()
 
@@ -118,9 +139,9 @@ def run_server() -> None:
     """Run the IPC server, reading requests from stdin and writing responses to stdout.
 
     The server runs until it receives a shutdown request or stdin is closed.
-    Also starts the capture daemon to automatically record activity.
+    Starts all background services (capture, hourly, daily) via ServiceManager.
     """
-    global _start_time, _running, _capture_daemon
+    global _start_time, _running, _service_manager
 
     _start_time = time.time()
     _running = True
@@ -134,17 +155,25 @@ def run_server() -> None:
 
     logger.info("IPC server starting")
 
-    # Start the capture daemon in a background thread
+    # Register all handlers
+    _register_handlers()
+
+    # Start all services via ServiceManager
+    service_results = {}
     try:
-        _capture_daemon = CaptureDaemon()
-        _capture_daemon.start(blocking=False)
-        logger.info("Capture daemon started")
+        _service_manager = ServiceManager()
+        service_results = _service_manager.start_all(notify=True)
+        logger.info(f"Services started: {service_results}")
     except Exception as e:
-        logger.error(f"Failed to start capture daemon: {e}")
-        _capture_daemon = None
+        logger.error(f"Failed to start services: {e}")
+        _service_manager = None
 
     # Signal readiness to parent process
-    ready_msg = {"type": "ready", "version": __version__}
+    ready_msg = {
+        "type": "ready",
+        "version": __version__,
+        "services": service_results,
+    }
     sys.stdout.write(json.dumps(ready_msg) + "\n")
     sys.stdout.flush()
 
@@ -180,8 +209,8 @@ def run_server() -> None:
                 break
 
     finally:
-        # Stop the capture daemon
-        if _capture_daemon:
-            logger.info("Stopping capture daemon...")
-            _capture_daemon.stop()
+        # Stop all services
+        if _service_manager:
+            logger.info("Stopping all services...")
+            _service_manager.stop_all()
         logger.info("IPC server stopped")
