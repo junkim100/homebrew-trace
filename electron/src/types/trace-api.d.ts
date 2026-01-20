@@ -211,6 +211,272 @@ export interface WindowAPI {
   close(): Promise<void>;
 }
 
+/** Graph node for visualization */
+export interface GraphNode {
+  id: string;
+  label: string;
+  type: string;
+  noteCount: number;
+  edgeCount: number;
+}
+
+/** Graph edge for visualization */
+export interface GraphEdge {
+  source: string;
+  target: string;
+  type: string;
+  weight: number;
+}
+
+/** Graph data response */
+export interface GraphDataResponse {
+  success: boolean;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  nodeCount: number;
+  edgeCount: number;
+  error?: string;
+}
+
+/** Entity type with count */
+export interface EntityTypeCount {
+  type: string;
+  count: number;
+}
+
+/** Entity types response */
+export interface EntityTypesResponse {
+  success: boolean;
+  types: EntityTypeCount[];
+  error?: string;
+}
+
+/** Related entity in details view */
+export interface RelatedEntityInfo {
+  id: string;
+  direction: 'incoming' | 'outgoing';
+  edgeType: string;
+  weight: number;
+  name: string;
+  type: string;
+}
+
+/** Note reference in entity details */
+export interface EntityNoteRef {
+  noteId: string;
+  path: string;
+  timestamp: string;
+  summary: string;
+  strength: number;
+}
+
+/** Entity details response */
+export interface EntityDetailsResponse {
+  success: boolean;
+  entity?: {
+    id: string;
+    type: string;
+    name: string;
+    aliases: string[];
+  };
+  related?: RelatedEntityInfo[];
+  notes?: EntityNoteRef[];
+  error?: string;
+}
+
+/** Graph data options */
+export interface GraphDataOptions {
+  daysBack?: number;
+  entityTypes?: string[];
+  minEdgeWeight?: number;
+  limit?: number;
+}
+
+/** Graph API methods */
+export interface GraphAPI {
+  /** Get graph data for visualization */
+  getData(options?: GraphDataOptions): Promise<GraphDataResponse>;
+
+  /** Get entity types with counts */
+  getEntityTypes(): Promise<EntityTypesResponse>;
+
+  /** Get entity details */
+  getEntityDetails(entityId: string): Promise<EntityDetailsResponse>;
+}
+
+/** Open loop entry */
+export interface OpenLoop {
+  loop_id: string;
+  description: string;
+  source_note_id: string;
+  source_note_path: string;
+  detected_at: string;
+  context: string | null;
+  completed: boolean;
+}
+
+/** Open loops list response */
+export interface OpenLoopsListResponse {
+  success: boolean;
+  loops: OpenLoop[];
+  count: number;
+  error?: string;
+}
+
+/** Open loops summary response */
+export interface OpenLoopsSummaryResponse {
+  success: boolean;
+  total_count: number;
+  today_count: number;
+  this_week_count: number;
+  days_with_loops: number;
+  recent_loops: Array<{
+    loop_id: string;
+    description: string;
+    source_note_id: string;
+    detected_at: string;
+    context: string | null;
+  }>;
+  error?: string;
+}
+
+/** Open loops list options */
+export interface OpenLoopsListOptions {
+  daysBack?: number;
+  limit?: number;
+}
+
+/** Open Loops API methods */
+export interface OpenLoopsAPI {
+  /** List open loops from recent notes */
+  list(options?: OpenLoopsListOptions): Promise<OpenLoopsListResponse>;
+
+  /** Get open loops summary */
+  summary(): Promise<OpenLoopsSummaryResponse>;
+}
+
+/** Blocklist entry */
+export interface BlocklistEntry {
+  blocklist_id: string;
+  block_type: 'app' | 'domain';
+  pattern: string;
+  display_name: string | null;
+  enabled: boolean;
+  block_screenshots: boolean;
+  block_events: boolean;
+  created_ts: string;
+  updated_ts: string;
+}
+
+/** Blocklist API response */
+export interface BlocklistListResponse {
+  success: boolean;
+  entries: BlocklistEntry[];
+  count: number;
+}
+
+/** Blocklist add response */
+export interface BlocklistAddResponse {
+  success: boolean;
+  entry?: BlocklistEntry;
+  error?: string;
+}
+
+/** Blocklist operation response */
+export interface BlocklistOperationResponse {
+  success: boolean;
+  removed?: boolean;
+  updated?: boolean;
+  added?: number;
+  error?: string;
+}
+
+/** Blocklist check response */
+export interface BlocklistCheckResponse {
+  success: boolean;
+  blocked: boolean;
+  reason: string | null;
+  error?: string;
+}
+
+/** Export summary */
+export interface ExportSummary {
+  success: boolean;
+  notes_in_db: number;
+  markdown_files: number;
+  entities: number;
+  edges: number;
+  aggregates: number;
+  estimated_markdown_size_bytes: number;
+  error?: string;
+}
+
+/** Export result */
+export interface ExportResult {
+  success: boolean;
+  format?: string;
+  notes_count?: number;
+  entities_count?: number;
+  edges_count?: number;
+  export_path?: string;
+  export_size_bytes?: number;
+  export_time_seconds?: number;
+  canceled?: boolean;
+  error?: string;
+}
+
+/** Export API methods */
+export interface ExportAPI {
+  /** Get summary of exportable data */
+  summary(): Promise<ExportSummary>;
+
+  /** Export to JSON format */
+  toJson(outputPath: string): Promise<ExportResult>;
+
+  /** Export to Markdown directory */
+  toMarkdown(outputPath: string): Promise<ExportResult>;
+
+  /** Export to ZIP archive */
+  toArchive(outputPath: string): Promise<ExportResult>;
+
+  /** Show save dialog and export to archive */
+  saveArchive(): Promise<ExportResult>;
+}
+
+/** Blocklist API methods */
+export interface BlocklistAPI {
+  /** List all blocklist entries */
+  list(includeDisabled?: boolean): Promise<BlocklistListResponse>;
+
+  /** Add an app to the blocklist */
+  addApp(
+    bundleId: string,
+    displayName?: string | null,
+    blockScreenshots?: boolean,
+    blockEvents?: boolean
+  ): Promise<BlocklistAddResponse>;
+
+  /** Add a domain to the blocklist */
+  addDomain(
+    domain: string,
+    displayName?: string | null,
+    blockScreenshots?: boolean,
+    blockEvents?: boolean
+  ): Promise<BlocklistAddResponse>;
+
+  /** Remove an entry from the blocklist */
+  remove(blocklistId: string): Promise<BlocklistOperationResponse>;
+
+  /** Enable or disable a blocklist entry */
+  setEnabled(blocklistId: string, enabled: boolean): Promise<BlocklistOperationResponse>;
+
+  /** Initialize default blocklist entries */
+  initDefaults(): Promise<BlocklistOperationResponse>;
+
+  /** Check if an app or URL is blocked */
+  check(bundleId?: string | null, url?: string | null): Promise<BlocklistCheckResponse>;
+}
+
 export interface TraceAPI {
   /** Ping the Electron main process */
   ping(): Promise<string>;
@@ -232,6 +498,18 @@ export interface TraceAPI {
 
   /** Settings API */
   settings: SettingsAPI;
+
+  /** Export API */
+  export: ExportAPI;
+
+  /** Graph API */
+  graph: GraphAPI;
+
+  /** Open Loops API */
+  openLoops: OpenLoopsAPI;
+
+  /** Blocklist API */
+  blocklist: BlocklistAPI;
 
   /** Window control */
   window: WindowAPI;

@@ -512,6 +512,17 @@ ipcMain.handle('permissions:openSettings', async (event, permission) => {
   return { success: false, error: 'Unknown permission' };
 });
 
+// Dialog handlers for export
+ipcMain.handle('dialog:showSaveDialog', async (event, options) => {
+  const result = await dialog.showSaveDialog(mainWindow, options);
+  return result;
+});
+
+ipcMain.handle('dialog:showOpenDialog', async (event, options) => {
+  const result = await dialog.showOpenDialog(mainWindow, options);
+  return result;
+});
+
 // Create system tray
 function createTray() {
   // Create a simple tray icon (16x16 template image for macOS)

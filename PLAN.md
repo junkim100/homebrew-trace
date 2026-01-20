@@ -168,10 +168,10 @@ MVP delivers:
 
 | ID | Description | Files/Modules | Acceptance Criteria | Status |
 |----|-------------|---------------|---------------------|--------|
-| P10-01 | Selective capture blocklist | `src/capture/blocklist.py`, `electron/src/pages/Settings.tsx` | Users can block specific apps/domains from capture (banking, medical) | [ ] |
-| P10-02 | Export/backup functionality | `src/core/export.py` | Export all notes and graph to portable format (JSON, Markdown archive) | [ ] |
-| P10-03 | Open loop tracking UI | `electron/src/components/OpenLoops.tsx` | Surface incomplete tasks from notes with optional reminders | [ ] |
-| P10-04 | Graph visualization UI | `electron/src/pages/Graph.tsx` | Interactive knowledge graph explorer in desktop app | [ ] |
+| P10-01 | Selective capture blocklist | `src/capture/blocklist.py`, `electron/src/pages/Settings.tsx` | Users can block specific apps/domains from capture (banking, medical) | [x] |
+| P10-02 | Export/backup functionality | `src/core/export.py` | Export all notes and graph to portable format (JSON, Markdown archive) | [x] |
+| P10-03 | Open loop tracking UI | `electron/src/components/OpenLoops.tsx` | Surface incomplete tasks from notes with optional reminders | [x] |
+| P10-04 | Graph visualization UI | `electron/src/pages/Graph.tsx` | Interactive knowledge graph explorer in desktop app | [x] |
 
 ### Phase 11: Platform Integration
 

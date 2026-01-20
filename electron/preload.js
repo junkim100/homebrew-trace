@@ -134,6 +134,121 @@ contextBridge.exposeInMainWorld('traceAPI', {
       ipcRenderer.invoke('python:call', 'settings.set_api_key', { api_key: apiKey }),
   },
 
+  // Export methods (for backup/export)
+  export: {
+    // Get summary of exportable data
+    summary: () =>
+      ipcRenderer.invoke('python:call', 'export.summary', {}),
+
+    // Export to JSON format
+    toJson: (outputPath) =>
+      ipcRenderer.invoke('python:call', 'export.json', { output_path: outputPath }),
+
+    // Export to Markdown directory
+    toMarkdown: (outputPath) =>
+      ipcRenderer.invoke('python:call', 'export.markdown', { output_path: outputPath }),
+
+    // Export to ZIP archive
+    toArchive: (outputPath) =>
+      ipcRenderer.invoke('python:call', 'export.archive', { output_path: outputPath }),
+
+    // Show save dialog and export
+    saveArchive: async () => {
+      const result = await ipcRenderer.invoke('dialog:showSaveDialog', {
+        title: 'Export Trace Data',
+        defaultPath: `trace-export-${new Date().toISOString().split('T')[0]}.zip`,
+        filters: [
+          { name: 'ZIP Archive', extensions: ['zip'] },
+        ],
+      });
+      if (result.canceled || !result.filePath) {
+        return { success: false, canceled: true };
+      }
+      return ipcRenderer.invoke('python:call', 'export.archive', { output_path: result.filePath });
+    },
+  },
+
+  // Graph visualization methods
+  graph: {
+    // Get graph data for visualization
+    getData: (options = {}) =>
+      ipcRenderer.invoke('python:call', 'graph.data', {
+        days_back: options.daysBack ?? 30,
+        entity_types: options.entityTypes,
+        min_edge_weight: options.minEdgeWeight ?? 0.3,
+        limit: options.limit ?? 100,
+      }),
+
+    // Get entity types with counts
+    getEntityTypes: () =>
+      ipcRenderer.invoke('python:call', 'graph.entity_types', {}),
+
+    // Get entity details
+    getEntityDetails: (entityId) =>
+      ipcRenderer.invoke('python:call', 'graph.entity_details', { entity_id: entityId }),
+  },
+
+  // Open loops methods (for incomplete tasks tracking)
+  openLoops: {
+    // List open loops from recent notes
+    list: (options = {}) =>
+      ipcRenderer.invoke('python:call', 'openloops.list', {
+        days_back: options.daysBack ?? 7,
+        limit: options.limit ?? 50,
+      }),
+
+    // Get open loops summary
+    summary: () =>
+      ipcRenderer.invoke('python:call', 'openloops.summary', {}),
+  },
+
+  // Blocklist methods (for blocking apps/domains from capture)
+  blocklist: {
+    // List all blocklist entries
+    list: (includeDisabled = true) =>
+      ipcRenderer.invoke('python:call', 'blocklist.list', { include_disabled: includeDisabled }),
+
+    // Add an app to the blocklist
+    addApp: (bundleId, displayName = null, blockScreenshots = true, blockEvents = true) =>
+      ipcRenderer.invoke('python:call', 'blocklist.add_app', {
+        bundle_id: bundleId,
+        display_name: displayName,
+        block_screenshots: blockScreenshots,
+        block_events: blockEvents,
+      }),
+
+    // Add a domain to the blocklist
+    addDomain: (domain, displayName = null, blockScreenshots = true, blockEvents = true) =>
+      ipcRenderer.invoke('python:call', 'blocklist.add_domain', {
+        domain: domain,
+        display_name: displayName,
+        block_screenshots: blockScreenshots,
+        block_events: blockEvents,
+      }),
+
+    // Remove an entry from the blocklist
+    remove: (blocklistId) =>
+      ipcRenderer.invoke('python:call', 'blocklist.remove', { blocklist_id: blocklistId }),
+
+    // Enable or disable a blocklist entry
+    setEnabled: (blocklistId, enabled) =>
+      ipcRenderer.invoke('python:call', 'blocklist.set_enabled', {
+        blocklist_id: blocklistId,
+        enabled: enabled,
+      }),
+
+    // Initialize default blocklist entries (password managers, banking sites)
+    initDefaults: () =>
+      ipcRenderer.invoke('python:call', 'blocklist.init_defaults', {}),
+
+    // Check if an app or URL is blocked
+    check: (bundleId = null, url = null) =>
+      ipcRenderer.invoke('python:call', 'blocklist.check', {
+        bundle_id: bundleId,
+        url: url,
+      }),
+  },
+
   // Window control methods
   window: {
     // Minimize window

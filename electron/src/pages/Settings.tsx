@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { AppSettings } from '../types/trace-api';
+import type { AppSettings, BlocklistEntry } from '../types/trace-api';
 
 export function Settings() {
   const navigate = useNavigate();
@@ -10,6 +10,36 @@ export function Settings() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Blocklist state
+  const [blocklistEntries, setBlocklistEntries] = useState<BlocklistEntry[]>([]);
+  const [blocklistLoading, setBlocklistLoading] = useState(false);
+  const [newBlockType, setNewBlockType] = useState<'app' | 'domain'>('domain');
+  const [newBlockPattern, setNewBlockPattern] = useState('');
+  const [newBlockName, setNewBlockName] = useState('');
+
+  // Export state
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportSummary, setExportSummary] = useState<{
+    notes_in_db: number;
+    markdown_files: number;
+    entities: number;
+    edges: number;
+  } | null>(null);
+
+  const loadBlocklist = async () => {
+    setBlocklistLoading(true);
+    try {
+      const result = await window.traceAPI.blocklist.list(true);
+      if (result.success) {
+        setBlocklistEntries(result.entries);
+      }
+    } catch (err) {
+      console.error('Failed to load blocklist:', err);
+    } finally {
+      setBlocklistLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -24,7 +54,25 @@ export function Settings() {
     };
 
     loadSettings();
+    loadBlocklist();
+    loadExportSummary();
   }, []);
+
+  const loadExportSummary = async () => {
+    try {
+      const result = await window.traceAPI.export.summary();
+      if (result.success) {
+        setExportSummary({
+          notes_in_db: result.notes_in_db,
+          markdown_files: result.markdown_files,
+          entities: result.entities,
+          edges: result.edges,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load export summary:', err);
+    }
+  };
 
   const handleSaveApiKey = async () => {
     if (!apiKey.trim()) return;
@@ -42,6 +90,85 @@ export function Settings() {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save API key' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAddBlocklistEntry = async () => {
+    if (!newBlockPattern.trim()) return;
+
+    try {
+      const result = newBlockType === 'app'
+        ? await window.traceAPI.blocklist.addApp(newBlockPattern.trim(), newBlockName.trim() || null)
+        : await window.traceAPI.blocklist.addDomain(newBlockPattern.trim(), newBlockName.trim() || null);
+
+      if (result.success) {
+        setMessage({ type: 'success', text: `Added ${newBlockType} to blocklist` });
+        setNewBlockPattern('');
+        setNewBlockName('');
+        loadBlocklist();
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Failed to add to blocklist' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to add to blocklist' });
+    }
+  };
+
+  const handleRemoveBlocklistEntry = async (blocklistId: string) => {
+    try {
+      const result = await window.traceAPI.blocklist.remove(blocklistId);
+      if (result.success) {
+        loadBlocklist();
+      }
+    } catch (err) {
+      console.error('Failed to remove blocklist entry:', err);
+    }
+  };
+
+  const handleToggleBlocklistEntry = async (blocklistId: string, enabled: boolean) => {
+    try {
+      const result = await window.traceAPI.blocklist.setEnabled(blocklistId, enabled);
+      if (result.success) {
+        loadBlocklist();
+      }
+    } catch (err) {
+      console.error('Failed to toggle blocklist entry:', err);
+    }
+  };
+
+  const handleInitDefaults = async () => {
+    try {
+      const result = await window.traceAPI.blocklist.initDefaults();
+      if (result.success) {
+        setMessage({ type: 'success', text: `Added ${result.added} default blocklist entries` });
+        loadBlocklist();
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to initialize defaults' });
+    }
+  };
+
+  const handleExport = async () => {
+    setExportLoading(true);
+    setMessage(null);
+    try {
+      const result = await window.traceAPI.export.saveArchive();
+      if (result.canceled) {
+        // User cancelled the dialog
+        return;
+      }
+      if (result.success) {
+        setMessage({
+          type: 'success',
+          text: `Exported ${result.notes_count} notes to ${result.export_path}`,
+        });
+      } else {
+        setMessage({ type: 'error', text: result.error || 'Export failed' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Export failed' });
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -137,6 +264,139 @@ export function Settings() {
               </div>
             </>
           )}
+        </section>
+
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Privacy Blocklist</h2>
+          <p style={styles.description}>
+            Block specific apps and websites from being captured.
+            Use this to protect sensitive activities like banking, medical, or password managers.
+          </p>
+
+          {/* Add new entry form */}
+          <div style={styles.blocklistForm}>
+            <select
+              value={newBlockType}
+              onChange={(e) => setNewBlockType(e.target.value as 'app' | 'domain')}
+              style={styles.select}
+            >
+              <option value="domain">Domain</option>
+              <option value="app">App</option>
+            </select>
+            <input
+              type="text"
+              value={newBlockPattern}
+              onChange={(e) => setNewBlockPattern(e.target.value)}
+              placeholder={newBlockType === 'domain' ? 'example.com' : 'com.example.app'}
+              style={styles.input}
+            />
+            <input
+              type="text"
+              value={newBlockName}
+              onChange={(e) => setNewBlockName(e.target.value)}
+              placeholder="Display name (optional)"
+              style={{ ...styles.input, flex: 0.7 }}
+            />
+            <button
+              onClick={handleAddBlocklistEntry}
+              disabled={!newBlockPattern.trim()}
+              style={{
+                ...styles.saveButton,
+                ...(!newBlockPattern.trim() ? styles.saveButtonDisabled : {}),
+              }}
+            >
+              Add
+            </button>
+          </div>
+
+          {/* Initialize defaults button */}
+          {blocklistEntries.length === 0 && (
+            <button
+              onClick={handleInitDefaults}
+              style={styles.initDefaultsButton}
+            >
+              Add Default Blocklist (Banking, Password Managers)
+            </button>
+          )}
+
+          {/* Blocklist entries */}
+          {blocklistLoading ? (
+            <div style={styles.loading}>Loading blocklist...</div>
+          ) : blocklistEntries.length === 0 ? (
+            <p style={styles.emptyState}>No blocked apps or domains yet.</p>
+          ) : (
+            <div style={styles.blocklistEntries}>
+              {blocklistEntries.map((entry) => (
+                <div key={entry.blocklist_id} style={styles.blocklistEntry}>
+                  <div style={styles.entryInfo}>
+                    <span style={styles.entryType}>{entry.block_type}</span>
+                    <span style={styles.entryPattern}>
+                      {entry.display_name || entry.pattern}
+                    </span>
+                    {entry.display_name && (
+                      <span style={styles.entryPatternSub}>{entry.pattern}</span>
+                    )}
+                  </div>
+                  <div style={styles.entryActions}>
+                    <button
+                      onClick={() => handleToggleBlocklistEntry(entry.blocklist_id, !entry.enabled)}
+                      style={{
+                        ...styles.toggleButton,
+                        ...(entry.enabled ? styles.toggleEnabled : styles.toggleDisabled),
+                      }}
+                    >
+                      {entry.enabled ? 'Enabled' : 'Disabled'}
+                    </button>
+                    <button
+                      onClick={() => handleRemoveBlocklistEntry(entry.blocklist_id)}
+                      style={styles.removeButton}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Export & Backup</h2>
+          <p style={styles.description}>
+            Export your data as a ZIP archive containing all notes, entities, and relationships.
+          </p>
+
+          {exportSummary && (
+            <div style={styles.exportSummary}>
+              <div style={styles.summaryItem}>
+                <span style={styles.summaryLabel}>Notes</span>
+                <span style={styles.summaryValue}>{exportSummary.notes_in_db}</span>
+              </div>
+              <div style={styles.summaryItem}>
+                <span style={styles.summaryLabel}>Markdown Files</span>
+                <span style={styles.summaryValue}>{exportSummary.markdown_files}</span>
+              </div>
+              <div style={styles.summaryItem}>
+                <span style={styles.summaryLabel}>Entities</span>
+                <span style={styles.summaryValue}>{exportSummary.entities}</span>
+              </div>
+              <div style={styles.summaryItem}>
+                <span style={styles.summaryLabel}>Relationships</span>
+                <span style={styles.summaryValue}>{exportSummary.edges}</span>
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleExport}
+            disabled={exportLoading}
+            style={{
+              ...styles.exportButton,
+              ...(exportLoading ? styles.saveButtonDisabled : {}),
+            }}
+          >
+            {exportLoading ? 'Exporting...' : 'Export to ZIP Archive'}
+          </button>
         </section>
 
         <section style={styles.section}>
@@ -294,6 +554,137 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.9rem',
     color: 'var(--text-secondary)',
     lineHeight: 1.6,
+  },
+  // Blocklist styles
+  blocklistForm: {
+    display: 'flex',
+    gap: '0.5rem',
+    marginBottom: '1rem',
+    flexWrap: 'wrap',
+  },
+  select: {
+    backgroundColor: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '0.625rem 0.875rem',
+    fontSize: '0.9rem',
+    color: 'var(--text-primary)',
+    outline: 'none',
+    cursor: 'pointer',
+  },
+  initDefaultsButton: {
+    backgroundColor: 'transparent',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '0.625rem 1rem',
+    fontSize: '0.85rem',
+    color: 'var(--text-secondary)',
+    cursor: 'pointer',
+    marginBottom: '1rem',
+  },
+  emptyState: {
+    fontSize: '0.85rem',
+    color: 'var(--text-secondary)',
+    fontStyle: 'italic',
+  },
+  blocklistEntries: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.5rem',
+  },
+  blocklistEntry: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '0.75rem 1rem',
+  },
+  entryInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  entryType: {
+    fontSize: '0.7rem',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    backgroundColor: 'var(--accent)',
+    color: 'white',
+    padding: '0.2rem 0.5rem',
+    borderRadius: '4px',
+  },
+  entryPattern: {
+    fontSize: '0.9rem',
+    color: 'var(--text-primary)',
+    fontWeight: 500,
+  },
+  entryPatternSub: {
+    fontSize: '0.8rem',
+    color: 'var(--text-secondary)',
+    fontFamily: 'ui-monospace, SFMono-Regular, SF Mono, Menlo, monospace',
+  },
+  entryActions: {
+    display: 'flex',
+    gap: '0.5rem',
+  },
+  toggleEnabled: {
+    backgroundColor: 'rgba(52, 199, 89, 0.15)',
+    border: '1px solid rgba(52, 199, 89, 0.3)',
+    color: '#34c759',
+  },
+  toggleDisabled: {
+    backgroundColor: 'rgba(142, 142, 147, 0.15)',
+    border: '1px solid rgba(142, 142, 147, 0.3)',
+    color: '#8e8e93',
+  },
+  removeButton: {
+    backgroundColor: 'transparent',
+    border: '1px solid rgba(255, 59, 48, 0.3)',
+    borderRadius: '6px',
+    padding: '0.4rem 0.75rem',
+    fontSize: '0.8rem',
+    color: '#ff3b30',
+    cursor: 'pointer',
+  },
+  // Export styles
+  exportSummary: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: '0.75rem',
+    marginBottom: '1rem',
+  },
+  summaryItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'var(--bg-secondary)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '0.75rem 1rem',
+  },
+  summaryLabel: {
+    fontSize: '0.85rem',
+    color: 'var(--text-secondary)',
+  },
+  summaryValue: {
+    fontSize: '1rem',
+    fontWeight: 600,
+    color: 'var(--text-primary)',
+  },
+  exportButton: {
+    backgroundColor: 'var(--accent)',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '0.75rem 1.5rem',
+    fontSize: '0.9rem',
+    fontWeight: 500,
+    color: 'white',
+    cursor: 'pointer',
+    width: '100%',
   },
 };
 

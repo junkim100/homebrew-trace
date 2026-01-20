@@ -29,7 +29,11 @@ def _register_handlers() -> None:
     """Register all IPC handlers from handler modules."""
     # Import handler modules to trigger @handler decorator registration
     from src.trace_app.ipc import (  # noqa: F401
+        blocklist_handlers,
         chat_handlers,
+        export_handlers,
+        graph_handlers,
+        open_loops_handlers,
         permissions_handlers,
         service_handlers,
     )

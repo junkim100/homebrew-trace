@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 import Permissions from './pages/permissions';
+import Graph from './pages/Graph';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/chat" element={<Chat />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/permissions" element={<Permissions />} />
+          <Route path="/graph" element={<Graph />} />
         </Routes>
       </HashRouter>
     </ErrorBoundary>

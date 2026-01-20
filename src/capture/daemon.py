@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from src.capture.blocklist import BlocklistManager
 from src.capture.dedup import DuplicateTracker
 from src.capture.events import EventTracker
 from src.capture.foreground import ForegroundApp, capture_foreground_app
@@ -69,6 +70,8 @@ class CaptureSnapshot:
     now_playing_json: str | None
     location_text: str | None
     event_closed: bool
+    blocked: bool = False
+    blocked_reason: str | None = None
 
 
 class CaptureDaemon:
@@ -114,6 +117,7 @@ class CaptureDaemon:
         self._now_playing_capture = MediaRemoteCapture()
         self._location_capture = LocationCapture(min_interval_seconds=location_interval)
         self._url_capture = URLCapture()
+        self._blocklist = BlocklistManager(db_path=self.db_path)
 
         # State
         self._running = False
@@ -232,15 +236,37 @@ class CaptureDaemon:
         url = url_result.url if url_result else None
         page_title = url_result.title if url_result else None
 
-        # 3. Capture now playing
+        # 3. Check blocklist - skip capture if blocked
+        is_blocked, blocked_reason = self._blocklist.should_block_capture(
+            bundle_id=foreground.bundle_id,
+            url=url,
+        )
+
+        if is_blocked:
+            logger.debug(f"Capture blocked: {blocked_reason}")
+            return CaptureSnapshot(
+                timestamp=timestamp,
+                foreground=foreground,
+                screenshots=[],
+                deduplicated_count=0,
+                url=None,  # Don't record the URL
+                page_title=None,
+                now_playing_json=None,
+                location_text=None,
+                event_closed=False,
+                blocked=True,
+                blocked_reason=blocked_reason,
+            )
+
+        # 4. Capture now playing
         now_playing = self._now_playing_capture.capture(timestamp)
         now_playing_json = now_playing.to_json() if now_playing else None
 
-        # 4. Capture location (less frequently)
+        # 5. Capture location (less frequently)
         location = self._location_capture.capture(timestamp)
         location_text = location.location_text if location else None
 
-        # 5. Update event tracker
+        # 6. Update event tracker
         closed_event = self._event_tracker.update(
             foreground=foreground,
             url=url,
@@ -252,11 +278,11 @@ class CaptureDaemon:
         if closed_event:
             self._stats.events_created += 1
 
-        # 6. Capture screenshots
+        # 7. Capture screenshots
         screenshots = self._screenshot_capture.capture_all(timestamp)
         deduplicated_count = 0
 
-        # 7. Process screenshots (deduplication, store to DB)
+        # 8. Process screenshots (deduplication, store to DB)
         screenshots_to_store = []
         for screenshot in screenshots:
             try:
@@ -281,7 +307,7 @@ class CaptureDaemon:
             except Exception as e:
                 logger.error(f"Screenshot processing error: {e}")
 
-        # 8. Store screenshots in database
+        # 9. Store screenshots in database
         for screenshot, fingerprint, diff in screenshots_to_store:
             self._store_screenshot(screenshot, fingerprint, diff)
 
@@ -295,6 +321,8 @@ class CaptureDaemon:
             now_playing_json=now_playing_json,
             location_text=location_text,
             event_closed=closed_event is not None,
+            blocked=False,
+            blocked_reason=None,
         )
 
     def _store_screenshot(

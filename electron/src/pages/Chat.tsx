@@ -5,6 +5,7 @@ import { TimeFilter, TimePreset, getTimeFilterHint } from '../components/TimeFil
 import { Results } from '../components/Results';
 import { Answer } from '../components/Answer';
 import { NoteViewer } from '../components/NoteViewer';
+import { OpenLoops } from '../components/OpenLoops';
 import type { ChatResponse } from '../types/trace-api';
 
 export function Chat() {
@@ -54,6 +55,20 @@ export function Chat() {
       <div className="titlebar" style={styles.titlebar}>
         <div style={styles.titlebarSpacer} />
         <button
+          onClick={() => navigate('/graph')}
+          style={styles.settingsButton}
+          title="Knowledge Graph"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="6" cy="6" r="3" />
+            <circle cx="18" cy="6" r="3" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="18" cy="18" r="3" />
+            <line x1="8.5" y1="7.5" x2="15.5" y2="16.5" />
+            <line x1="15.5" y1="7.5" x2="8.5" y2="16.5" />
+          </svg>
+        </button>
+        <button
           onClick={() => navigate('/settings')}
           style={styles.settingsButton}
           title="Settings"
@@ -74,6 +89,14 @@ export function Chat() {
               customStart={customStart}
               customEnd={customEnd}
               onChange={handleTimeFilterChange}
+            />
+          </div>
+
+          <div style={styles.openLoopsSection}>
+            <OpenLoops
+              onViewNote={(noteId) => setSelectedNoteId(noteId)}
+              maxItems={5}
+              compact
             />
           </div>
 
@@ -171,6 +194,9 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '1rem',
   },
   filterSection: {
+    flexShrink: 0,
+  },
+  openLoopsSection: {
     flexShrink: 0,
   },
   sectionTitle: {
