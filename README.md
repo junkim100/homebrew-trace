@@ -79,8 +79,10 @@ Location             ─┘
 |------------|---------|----------|
 | Screen Recording | Capture screenshots | Yes |
 | Accessibility | Read window titles and active app | Yes |
-| Location Services | Add location context to notes | No (optional) |
+| Location Services | Add location context to notes | No (optional)* |
 | Automation | Read browser URLs from Safari/Chrome | No (optional) |
+
+\* *Location Services requires a signed app. See [Limitations](#limitations) for details.*
 
 ---
 
@@ -310,6 +312,47 @@ uv run python -m src.chat.api chat "What did I work on yesterday?"
 - **Ephemeral artifacts**: Raw screenshots deleted daily after processing
 - **Minimal retention**: Only structured notes and metadata kept long-term
 - **API calls**: Only summarization uses OpenAI; images sent with `detail: low` when possible
+
+---
+
+## Limitations
+
+### Location Services Unavailable
+
+**Location Services cannot be enabled** in the current release. This is a macOS security restriction.
+
+macOS requires apps to be signed with an Apple Developer certificate ($99/year) for Location Services to work. Without code signing:
+- The Location Services toggle in System Settings will automatically turn off
+- This is not a bug - it's an Apple security policy for unsigned apps
+
+**What still works without Location Services:**
+- Screenshot capture
+- App and window tracking
+- Browser URL detection
+- Now playing music detection
+- All AI summarization features
+- Chat and search functionality
+
+If you'd like Location Services support, please consider [supporting the project](#support-the-project) to help fund an Apple Developer membership.
+
+---
+
+## Support the Project
+
+Trace is free and open source. If you find it useful, consider supporting its development!
+
+<a href="https://www.buymeacoffee.com/junkim100" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+
+### Funding Goals
+
+| Goal | Amount | Purpose |
+|------|--------|---------|
+| Apple Developer Program | $99/year | Enable Location Services and app notarization |
+
+Your support helps cover:
+- **Apple Developer membership** - Required for Location Services and removing security warnings
+- **Development time** - New features and improvements
+- **Infrastructure** - Testing across different macOS versions
 
 ---
 
