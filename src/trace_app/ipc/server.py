@@ -36,6 +36,7 @@ def _register_handlers() -> None:
         open_loops_handlers,
         permissions_handlers,
         service_handlers,
+        spotlight_handlers,
     )
 
 

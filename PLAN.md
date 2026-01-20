@@ -177,9 +177,9 @@ MVP delivers:
 
 | ID | Description | Files/Modules | Acceptance Criteria | Status |
 |----|-------------|---------------|---------------------|--------|
-| P11-01 | Spotlight integration | `src/platform/spotlight.py` | macOS Spotlight can search Trace notes | [ ] |
-| P11-02 | Global keyboard shortcuts | `electron/main.js`, `src/platform/shortcuts.py` | Hotkey to open chat, quick capture annotations | [ ] |
-| P11-03 | Menu bar quick actions | `electron/main.js` | Quick access to recent notes, current activity status | [ ] |
+| P11-01 | Spotlight integration | `src/platform/spotlight.py` | macOS Spotlight can search Trace notes | [x] |
+| P11-02 | Global keyboard shortcuts | `electron/main.js`, `src/platform/shortcuts.py` | Hotkey to open chat, quick capture annotations | [x] |
+| P11-03 | Menu bar quick actions | `electron/main.js` | Quick access to recent notes, current activity status | [x] |
 
 ### Phase 12: Analytics & Insights
 
