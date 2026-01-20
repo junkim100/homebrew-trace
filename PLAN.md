@@ -185,9 +185,9 @@ MVP delivers:
 
 | ID | Description | Files/Modules | Acceptance Criteria | Status |
 |----|-------------|---------------|---------------------|--------|
-| P12-01 | Activity dashboard | `electron/src/pages/Dashboard.tsx` | Visualizations: time per app/topic, trends, heatmaps | [ ] |
-| P12-02 | Weekly digest | `src/insights/digest.py`, `src/platform/notifications.py` | Automated weekly summary notification | [ ] |
-| P12-03 | Pattern detection | `src/insights/patterns.py` | Surface productivity patterns ("You code best in mornings") | [ ] |
+| P12-01 | Activity dashboard | `electron/src/pages/Dashboard.tsx` | Visualizations: time per app/topic, trends, heatmaps | [x] |
+| P12-02 | Weekly digest | `src/insights/digest.py`, `src/platform/notifications.py` | Automated weekly summary notification | [x] |
+| P12-03 | Pattern detection | `src/insights/patterns.py` | Surface productivity patterns ("You code best in mornings") | [x] |
 
 ### Phase 13: Future Platform Expansion
 

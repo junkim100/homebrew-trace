@@ -151,6 +151,128 @@ export interface ChatAPI {
   query(query: string, options?: ChatQueryOptions): Promise<ChatResponse>;
 }
 
+/** App usage statistics */
+export interface AppUsage {
+  appName: string;
+  bundleId: string;
+  totalMinutes: number;
+  sessionCount: number;
+  percentage: number;
+}
+
+/** Topic usage statistics */
+export interface TopicUsage {
+  topic: string;
+  entityType: string;
+  noteCount: number;
+  mentionStrength: number;
+}
+
+/** Activity trend data point */
+export interface ActivityTrend {
+  date: string;
+  eventCount: number;
+  uniqueApps: number;
+}
+
+/** Heatmap cell */
+export interface HeatmapCell {
+  hour: number;
+  dayOfWeek: number;
+  activityCount: number;
+}
+
+/** Productivity summary */
+export interface ProductivitySummary {
+  success: boolean;
+  totalMinutes: number;
+  totalHours: number;
+  uniqueApps: number;
+  notesGenerated: number;
+  entitiesExtracted: number;
+  mostProductiveHour: number | null;
+  daysAnalyzed: number;
+}
+
+/** Dashboard data response */
+export interface DashboardData {
+  success: boolean;
+  summary: ProductivitySummary;
+  appUsage: AppUsage[];
+  topicUsage: TopicUsage[];
+  activityTrend: ActivityTrend[];
+  activityHeatmap: HeatmapCell[];
+  error?: string;
+}
+
+/** Dashboard API methods */
+export interface DashboardAPI {
+  /** Get all dashboard data */
+  getData(daysBack?: number): Promise<DashboardData>;
+
+  /** Get productivity summary */
+  getSummary(daysBack?: number): Promise<ProductivitySummary>;
+
+  /** Get app usage statistics */
+  getAppUsage(daysBack?: number, limit?: number): Promise<{ success: boolean; apps: AppUsage[] }>;
+
+  /** Get topic usage statistics */
+  getTopicUsage(daysBack?: number, limit?: number): Promise<{ success: boolean; topics: TopicUsage[] }>;
+
+  /** Get activity trend */
+  getActivityTrend(daysBack?: number): Promise<{ success: boolean; trend: ActivityTrend[] }>;
+
+  /** Get activity heatmap */
+  getHeatmap(daysBack?: number): Promise<{ success: boolean; heatmap: HeatmapCell[] }>;
+}
+
+/** Weekly comparison data */
+export interface WeeklyComparison {
+  hoursChange: number;
+  hoursChangePercent: number;
+  appsChange: number;
+  notesChange: number;
+}
+
+/** Weekly digest data */
+export interface WeeklyDigest {
+  success: boolean;
+  weekStart: string;
+  weekEnd: string;
+  totalHours: number;
+  uniqueApps: number;
+  notesGenerated: number;
+  topApps: Array<{ appName: string; bundleId: string; minutes: number }>;
+  topTopics: Array<{ topic: string; entityType: string; noteCount: number }>;
+  productivityScore: number;
+  highlights: string[];
+  comparison: WeeklyComparison;
+  error?: string;
+}
+
+/** Digest notification result */
+export interface DigestNotificationResult {
+  success: boolean;
+  digest?: WeeklyDigest;
+  notificationSent?: boolean;
+  error?: string;
+}
+
+/** Weekly digest API methods */
+export interface DigestAPI {
+  /** Get current week digest */
+  getCurrent(): Promise<WeeklyDigest>;
+
+  /** Get digest for a specific week offset (0=current, 1=last week, etc.) */
+  getWeek(weekOffset?: number): Promise<WeeklyDigest>;
+
+  /** Send digest notification */
+  sendNotification(weekOffset?: number): Promise<DigestNotificationResult>;
+
+  /** Get digest history for multiple weeks */
+  getHistory(weeks?: number): Promise<{ success: boolean; digests: WeeklyDigest[] }>;
+}
+
 /** Note listing item */
 export interface NoteListItem {
   note_id: string;
@@ -527,6 +649,64 @@ export interface SpotlightAPI {
   triggerReindex(): Promise<{ success: boolean }>;
 }
 
+/** Detected pattern data */
+export interface PatternData {
+  [key: string]: unknown;
+}
+
+/** Detected pattern */
+export interface Pattern {
+  patternType: string;
+  description: string;
+  confidence: number;
+  data: PatternData;
+}
+
+/** All patterns response */
+export interface AllPatternsResponse {
+  success: boolean;
+  patterns: Pattern[];
+  patternCount: number;
+  daysAnalyzed: number;
+  error?: string;
+}
+
+/** Patterns by type response */
+export interface PatternsResponse {
+  success: boolean;
+  patterns: Pattern[];
+  error?: string;
+}
+
+/** Insights summary response */
+export interface InsightsSummaryResponse {
+  success: boolean;
+  insights: string[];
+  totalPatterns: number;
+  error?: string;
+}
+
+/** Pattern detection API methods */
+export interface PatternsAPI {
+  /** Get all detected patterns */
+  getAll(daysBack?: number): Promise<AllPatternsResponse>;
+
+  /** Get insights summary (top 3 patterns) */
+  getSummary(daysBack?: number): Promise<InsightsSummaryResponse>;
+
+  /** Get time of day patterns */
+  getTimeOfDay(daysBack?: number): Promise<PatternsResponse>;
+
+  /** Get day of week patterns */
+  getDayOfWeek(daysBack?: number): Promise<PatternsResponse>;
+
+  /** Get app usage patterns */
+  getApps(daysBack?: number): Promise<PatternsResponse>;
+
+  /** Get focus session patterns */
+  getFocus(daysBack?: number): Promise<PatternsResponse>;
+}
+
 /** Blocklist API methods */
 export interface BlocklistAPI {
   /** List all blocklist entries */
@@ -576,6 +756,15 @@ export interface TraceAPI {
 
   /** Chat/query API */
   chat: ChatAPI;
+
+  /** Dashboard API */
+  dashboard: DashboardAPI;
+
+  /** Weekly digest API */
+  digest: DigestAPI;
+
+  /** Pattern detection API */
+  patterns: PatternsAPI;
 
   /** Notes API */
   notes: NotesAPI;

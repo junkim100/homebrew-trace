@@ -109,6 +109,79 @@ contextBridge.exposeInMainWorld('traceAPI', {
       }),
   },
 
+  // Dashboard methods
+  dashboard: {
+    // Get all dashboard data
+    getData: (daysBack = 7) =>
+      ipcRenderer.invoke('python:call', 'dashboard.data', { days_back: daysBack }),
+
+    // Get productivity summary
+    getSummary: (daysBack = 7) =>
+      ipcRenderer.invoke('python:call', 'dashboard.summary', { days_back: daysBack }),
+
+    // Get app usage statistics
+    getAppUsage: (daysBack = 7, limit = 10) =>
+      ipcRenderer.invoke('python:call', 'dashboard.appUsage', { days_back: daysBack, limit }),
+
+    // Get topic usage statistics
+    getTopicUsage: (daysBack = 7, limit = 10) =>
+      ipcRenderer.invoke('python:call', 'dashboard.topicUsage', { days_back: daysBack, limit }),
+
+    // Get activity trend
+    getActivityTrend: (daysBack = 30) =>
+      ipcRenderer.invoke('python:call', 'dashboard.activityTrend', { days_back: daysBack }),
+
+    // Get activity heatmap
+    getHeatmap: (daysBack = 30) =>
+      ipcRenderer.invoke('python:call', 'dashboard.heatmap', { days_back: daysBack }),
+  },
+
+  // Weekly digest methods
+  digest: {
+    // Get current week digest
+    getCurrent: () =>
+      ipcRenderer.invoke('python:call', 'digest.current', {}),
+
+    // Get digest for a specific week
+    getWeek: (weekOffset = 1) =>
+      ipcRenderer.invoke('python:call', 'digest.week', { week_offset: weekOffset }),
+
+    // Send digest notification
+    sendNotification: (weekOffset = 1) =>
+      ipcRenderer.invoke('python:call', 'digest.notify', { week_offset: weekOffset }),
+
+    // Get digest history
+    getHistory: (weeks = 4) =>
+      ipcRenderer.invoke('python:call', 'digest.history', { weeks }),
+  },
+
+  // Pattern detection methods
+  patterns: {
+    // Get all detected patterns
+    getAll: (daysBack = 30) =>
+      ipcRenderer.invoke('python:call', 'patterns.all', { days_back: daysBack }),
+
+    // Get insights summary (top 3 patterns)
+    getSummary: (daysBack = 30) =>
+      ipcRenderer.invoke('python:call', 'patterns.summary', { days_back: daysBack }),
+
+    // Get time of day patterns
+    getTimeOfDay: (daysBack = 30) =>
+      ipcRenderer.invoke('python:call', 'patterns.timeOfDay', { days_back: daysBack }),
+
+    // Get day of week patterns
+    getDayOfWeek: (daysBack = 30) =>
+      ipcRenderer.invoke('python:call', 'patterns.dayOfWeek', { days_back: daysBack }),
+
+    // Get app usage patterns
+    getApps: (daysBack = 30) =>
+      ipcRenderer.invoke('python:call', 'patterns.apps', { days_back: daysBack }),
+
+    // Get focus session patterns
+    getFocus: (daysBack = 30) =>
+      ipcRenderer.invoke('python:call', 'patterns.focus', { days_back: daysBack }),
+  },
+
   // Notes methods
   notes: {
     // Read a specific note by ID
