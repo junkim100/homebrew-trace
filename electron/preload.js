@@ -202,6 +202,30 @@ contextBridge.exposeInMainWorld('traceAPI', {
       ipcRenderer.invoke('python:call', 'openloops.summary', {}),
   },
 
+  // Spotlight integration methods
+  spotlight: {
+    // Get Spotlight indexing status
+    status: () =>
+      ipcRenderer.invoke('python:call', 'spotlight.status', {}),
+
+    // Reindex all notes for Spotlight
+    reindex: () =>
+      ipcRenderer.invoke('python:call', 'spotlight.reindex', {}),
+
+    // Index a single note for Spotlight
+    indexNote: (notePath, options = {}) =>
+      ipcRenderer.invoke('python:call', 'spotlight.indexNote', {
+        notePath,
+        title: options.title,
+        summary: options.summary,
+        entities: options.entities,
+      }),
+
+    // Trigger Spotlight to reindex using mdimport
+    triggerReindex: () =>
+      ipcRenderer.invoke('python:call', 'spotlight.triggerReindex', {}),
+  },
+
   // Blocklist methods (for blocking apps/domains from capture)
   blocklist: {
     // List all blocklist entries
@@ -259,5 +283,44 @@ contextBridge.exposeInMainWorld('traceAPI', {
 
     // Close window
     close: () => ipcRenderer.invoke('window:close'),
+  },
+
+  // Global keyboard shortcuts
+  shortcuts: {
+    // Get current shortcut bindings
+    get: () => ipcRenderer.invoke('shortcuts:get'),
+
+    // Set a shortcut binding
+    set: (name, accelerator) => ipcRenderer.invoke('shortcuts:set', name, accelerator),
+
+    // Reset shortcuts to defaults
+    reset: () => ipcRenderer.invoke('shortcuts:reset'),
+
+    // Listen for shortcut events (e.g., quickCapture)
+    onQuickCapture: (callback) => {
+      ipcRenderer.on('shortcut:quickCapture', callback);
+      return () => ipcRenderer.removeListener('shortcut:quickCapture', callback);
+    },
+  },
+
+  // Tray menu event listeners
+  tray: {
+    // Listen for open note from tray
+    onOpenNote: (callback) => {
+      ipcRenderer.on('tray:openNote', (event, noteId) => callback(noteId));
+      return () => ipcRenderer.removeAllListeners('tray:openNote');
+    },
+
+    // Listen for open graph from tray
+    onOpenGraph: (callback) => {
+      ipcRenderer.on('tray:openGraph', callback);
+      return () => ipcRenderer.removeAllListeners('tray:openGraph');
+    },
+
+    // Listen for open settings from tray
+    onOpenSettings: (callback) => {
+      ipcRenderer.on('tray:openSettings', callback);
+      return () => ipcRenderer.removeAllListeners('tray:openSettings');
+    },
   },
 });

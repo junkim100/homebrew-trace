@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, systemPreferences, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, systemPreferences, shell, dialog, globalShortcut } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -365,6 +365,82 @@ async function checkAndRequestPermissions() {
   };
 }
 
+// Store for user-customizable shortcuts (loaded from settings)
+let shortcuts = {
+  toggleWindow: 'CommandOrControl+Shift+T',
+  quickCapture: 'CommandOrControl+Shift+N',
+};
+
+// Register global keyboard shortcuts
+function registerGlobalShortcuts() {
+  // Unregister any existing shortcuts first
+  globalShortcut.unregisterAll();
+
+  // Toggle window visibility
+  const toggleRet = globalShortcut.register(shortcuts.toggleWindow, () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible() && mainWindow.isFocused()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    } else {
+      createWindow();
+    }
+  });
+
+  if (!toggleRet) {
+    console.error(`Failed to register shortcut: ${shortcuts.toggleWindow}`);
+  }
+
+  // Quick capture annotation (opens chat and focuses input)
+  const captureRet = globalShortcut.register(shortcuts.quickCapture, () => {
+    if (!mainWindow) {
+      createWindow();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+    // Navigate to chat and focus input
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('shortcut:quickCapture');
+    }
+  });
+
+  if (!captureRet) {
+    console.error(`Failed to register shortcut: ${shortcuts.quickCapture}`);
+  }
+
+  console.log('Global shortcuts registered:', {
+    toggleWindow: shortcuts.toggleWindow,
+    quickCapture: shortcuts.quickCapture,
+  });
+}
+
+// Update a shortcut binding
+function updateShortcut(name, accelerator) {
+  if (!shortcuts.hasOwnProperty(name)) {
+    return { success: false, error: `Unknown shortcut: ${name}` };
+  }
+
+  // Validate the accelerator format
+  if (!accelerator || typeof accelerator !== 'string') {
+    return { success: false, error: 'Invalid accelerator' };
+  }
+
+  // Update and re-register
+  shortcuts[name] = accelerator;
+  registerGlobalShortcuts();
+
+  return { success: true, shortcut: name, accelerator };
+}
+
+// Get current shortcut bindings
+function getShortcuts() {
+  return { ...shortcuts };
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 app.whenReady().then(async () => {
@@ -373,6 +449,9 @@ app.whenReady().then(async () => {
 
   // Create system tray
   createTray();
+
+  // Register global shortcuts
+  registerGlobalShortcuts();
 
   // Check and request permissions on startup
   const permissions = await checkAndRequestPermissions();
@@ -401,7 +480,13 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   app.isQuitting = true;
+  globalShortcut.unregisterAll();
   stopPythonBackend();
+});
+
+app.on('will-quit', () => {
+  // Unregister all shortcuts when app is quitting
+  globalShortcut.unregisterAll();
 });
 
 // IPC handlers for renderer process
@@ -444,6 +529,25 @@ ipcMain.handle('window:maximize', () => {
 
 ipcMain.handle('window:close', () => {
   if (mainWindow) mainWindow.close();
+});
+
+// Global shortcuts handlers
+ipcMain.handle('shortcuts:get', () => {
+  return getShortcuts();
+});
+
+ipcMain.handle('shortcuts:set', (event, name, accelerator) => {
+  return updateShortcut(name, accelerator);
+});
+
+ipcMain.handle('shortcuts:reset', () => {
+  // Reset to defaults
+  shortcuts = {
+    toggleWindow: 'CommandOrControl+Shift+T',
+    quickCapture: 'CommandOrControl+Shift+N',
+  };
+  registerGlobalShortcuts();
+  return getShortcuts();
 });
 
 // Native permission handlers (these run in the Electron main process)
@@ -616,13 +720,56 @@ function createTray() {
   });
 }
 
+// Cache for recent notes and activity status
+let recentNotes = [];
+let currentActivity = null;
+
+// Fetch recent notes from Python backend
+async function fetchRecentNotes() {
+  if (!pythonReady) return [];
+  try {
+    const result = await callPython('notes.list', { limit: 5 });
+    if (result && result.notes) {
+      recentNotes = result.notes;
+      return result.notes;
+    }
+  } catch (err) {
+    console.error('Failed to fetch recent notes:', err);
+  }
+  return [];
+}
+
+// Fetch current activity status from Python backend
+async function fetchCurrentActivity() {
+  if (!pythonReady) return null;
+  try {
+    const result = await callPython('get_status', {});
+    if (result && result.capture_stats) {
+      currentActivity = {
+        captures: result.capture_stats.captures_total,
+        screenshots: result.capture_stats.screenshots_captured,
+        uptime: Math.round(result.uptime_seconds / 60), // minutes
+      };
+      return currentActivity;
+    }
+  } catch (err) {
+    console.error('Failed to fetch current activity:', err);
+  }
+  return null;
+}
+
 // Update tray menu when backend status changes
-function updateTrayMenu() {
+async function updateTrayMenu() {
   if (!tray) return;
 
-  const contextMenu = Menu.buildFromTemplate([
+  // Fetch fresh data
+  await Promise.all([fetchRecentNotes(), fetchCurrentActivity()]);
+
+  // Build menu template
+  const menuTemplate = [
     {
       label: 'Show Trace',
+      accelerator: shortcuts.toggleWindow,
       click: () => {
         if (mainWindow) {
           mainWindow.show();
@@ -633,23 +780,125 @@ function updateTrayMenu() {
       }
     },
     {
-      type: 'separator'
+      label: 'Quick Capture',
+      accelerator: shortcuts.quickCapture,
+      click: () => {
+        if (!mainWindow) {
+          createWindow();
+        } else {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.send('shortcut:quickCapture');
+        }
+      }
     },
+    { type: 'separator' },
+  ];
+
+  // Add current activity status
+  if (currentActivity) {
+    menuTemplate.push({
+      label: 'Activity Status',
+      submenu: [
+        {
+          label: `Captures: ${currentActivity.captures}`,
+          enabled: false,
+        },
+        {
+          label: `Screenshots: ${currentActivity.screenshots}`,
+          enabled: false,
+        },
+        {
+          label: `Uptime: ${currentActivity.uptime} min`,
+          enabled: false,
+        },
+      ],
+    });
+  }
+
+  // Add recent notes submenu
+  if (recentNotes.length > 0) {
+    const notesSubmenu = recentNotes.map(note => ({
+      label: note.title || note.note_id,
+      sublabel: note.date,
+      click: () => {
+        // Open window and navigate to the note
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        } else {
+          createWindow();
+        }
+        // Send event to view the note
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.send('tray:openNote', note.note_id);
+        }
+      },
+    }));
+
+    menuTemplate.push({
+      label: 'Recent Notes',
+      submenu: notesSubmenu,
+    });
+  }
+
+  menuTemplate.push(
+    { type: 'separator' },
+    {
+      label: 'Open Knowledge Graph',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        } else {
+          createWindow();
+        }
+        // Navigate to graph page
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.send('tray:openGraph');
+        }
+      },
+    },
+    { type: 'separator' },
     {
       label: 'Backend Status',
       sublabel: pythonReady ? 'Running' : 'Starting...',
-      enabled: false
+      enabled: false,
     },
+    { type: 'separator' },
     {
-      type: 'separator'
+      label: 'Settings',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show();
+          mainWindow.focus();
+        } else {
+          createWindow();
+        }
+        // Navigate to settings page
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.send('tray:openSettings');
+        }
+      },
     },
     {
       label: 'Quit Trace',
+      accelerator: 'CommandOrControl+Q',
       click: () => {
         app.quit();
-      }
+      },
     }
-  ]);
+  );
 
+  const contextMenu = Menu.buildFromTemplate(menuTemplate);
   tray.setContextMenu(contextMenu);
 }
+
+// Periodically refresh tray menu to show updated stats
+setInterval(() => {
+  if (pythonReady) {
+    updateTrayMenu();
+  }
+}, 60000); // Update every minute

@@ -211,6 +211,50 @@ export interface WindowAPI {
   close(): Promise<void>;
 }
 
+/** Shortcut names */
+export type ShortcutName = 'toggleWindow' | 'quickCapture';
+
+/** Shortcut bindings */
+export interface ShortcutBindings {
+  toggleWindow: string;
+  quickCapture: string;
+}
+
+/** Shortcut set result */
+export interface ShortcutSetResult {
+  success: boolean;
+  shortcut?: string;
+  accelerator?: string;
+  error?: string;
+}
+
+/** Global shortcuts API */
+export interface ShortcutsAPI {
+  /** Get current shortcut bindings */
+  get(): Promise<ShortcutBindings>;
+
+  /** Set a shortcut binding */
+  set(name: ShortcutName, accelerator: string): Promise<ShortcutSetResult>;
+
+  /** Reset shortcuts to defaults */
+  reset(): Promise<ShortcutBindings>;
+
+  /** Listen for quick capture shortcut events */
+  onQuickCapture(callback: () => void): () => void;
+}
+
+/** Tray menu event listeners */
+export interface TrayAPI {
+  /** Listen for open note events from tray menu */
+  onOpenNote(callback: (noteId: string) => void): () => void;
+
+  /** Listen for open graph events from tray menu */
+  onOpenGraph(callback: () => void): () => void;
+
+  /** Listen for open settings events from tray menu */
+  onOpenSettings(callback: () => void): () => void;
+}
+
 /** Graph node for visualization */
 export interface GraphNode {
   id: string;
@@ -443,6 +487,46 @@ export interface ExportAPI {
   saveArchive(): Promise<ExportResult>;
 }
 
+/** Spotlight indexing status */
+export interface SpotlightStatus {
+  success: boolean;
+  indexed: boolean;
+  notes_count: number;
+  directory: string;
+  excluded?: boolean;
+  error?: string;
+}
+
+/** Spotlight reindex result */
+export interface SpotlightReindexResult {
+  success: boolean;
+  total: number;
+  errors: number;
+  error?: string;
+}
+
+/** Spotlight index note options */
+export interface SpotlightIndexNoteOptions {
+  title?: string;
+  summary?: string;
+  entities?: string[];
+}
+
+/** Spotlight API methods */
+export interface SpotlightAPI {
+  /** Get Spotlight indexing status */
+  status(): Promise<SpotlightStatus>;
+
+  /** Reindex all notes for Spotlight */
+  reindex(): Promise<SpotlightReindexResult>;
+
+  /** Index a single note for Spotlight */
+  indexNote(notePath: string, options?: SpotlightIndexNoteOptions): Promise<{ success: boolean }>;
+
+  /** Trigger Spotlight to reindex using mdimport */
+  triggerReindex(): Promise<{ success: boolean }>;
+}
+
 /** Blocklist API methods */
 export interface BlocklistAPI {
   /** List all blocklist entries */
@@ -508,11 +592,20 @@ export interface TraceAPI {
   /** Open Loops API */
   openLoops: OpenLoopsAPI;
 
+  /** Spotlight API */
+  spotlight: SpotlightAPI;
+
   /** Blocklist API */
   blocklist: BlocklistAPI;
 
   /** Window control */
   window: WindowAPI;
+
+  /** Global shortcuts */
+  shortcuts: ShortcutsAPI;
+
+  /** Tray menu events */
+  tray: TrayAPI;
 }
 
 declare global {
