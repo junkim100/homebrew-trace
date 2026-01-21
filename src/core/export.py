@@ -331,43 +331,65 @@ class TraceExporter:
         Returns:
             Dictionary with counts of exportable data
         """
-        conn = self._get_connection()
+        notes_count = 0
+        entities_count = 0
+        edges_count = 0
+        aggregates_count = 0
+
         try:
-            cursor = conn.cursor()
+            conn = self._get_connection()
+            try:
+                cursor = conn.cursor()
 
-            cursor.execute("SELECT COUNT(*) FROM notes")
-            notes_count = cursor.fetchone()[0]
+                # Handle case where tables may not exist yet
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM notes")
+                    notes_count = cursor.fetchone()[0]
+                except sqlite3.OperationalError:
+                    pass
 
-            cursor.execute("SELECT COUNT(*) FROM entities")
-            entities_count = cursor.fetchone()[0]
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM entities")
+                    entities_count = cursor.fetchone()[0]
+                except sqlite3.OperationalError:
+                    pass
 
-            cursor.execute("SELECT COUNT(*) FROM edges")
-            edges_count = cursor.fetchone()[0]
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM edges")
+                    edges_count = cursor.fetchone()[0]
+                except sqlite3.OperationalError:
+                    pass
 
-            cursor.execute("SELECT COUNT(*) FROM aggregates")
-            aggregates_count = cursor.fetchone()[0]
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM aggregates")
+                    aggregates_count = cursor.fetchone()[0]
+                except sqlite3.OperationalError:
+                    pass
 
-            # Count markdown files
-            md_count = sum(1 for _ in self.notes_dir.rglob("*.md")) if self.notes_dir.exists() else 0
+            finally:
+                conn.close()
+        except Exception:
+            # Database doesn't exist yet
+            pass
 
-            # Estimate size
-            md_size = (
-                sum(f.stat().st_size for f in self.notes_dir.rglob("*.md"))
-                if self.notes_dir.exists()
-                else 0
-            )
+        # Count markdown files
+        md_count = sum(1 for _ in self.notes_dir.rglob("*.md")) if self.notes_dir.exists() else 0
 
-            return {
-                "notes_in_db": notes_count,
-                "markdown_files": md_count,
-                "entities": entities_count,
-                "edges": edges_count,
-                "aggregates": aggregates_count,
-                "estimated_markdown_size_bytes": md_size,
-            }
+        # Estimate size
+        md_size = (
+            sum(f.stat().st_size for f in self.notes_dir.rglob("*.md"))
+            if self.notes_dir.exists()
+            else 0
+        )
 
-        finally:
-            conn.close()
+        return {
+            "notes_in_db": notes_count,
+            "markdown_files": md_count,
+            "entities": entities_count,
+            "edges": edges_count,
+            "aggregates": aggregates_count,
+            "estimated_markdown_size_bytes": md_size,
+        }
 
 
 def export_trace_data(

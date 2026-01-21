@@ -358,7 +358,7 @@ export function Settings() {
                 <label style={styles.label}>Show in Dock</label>
                 <p style={styles.description}>When off, Trace only appears in the menu bar.</p>
               </div>
-              <label style={styles.switch}>
+              <label className="settings-switch" style={styles.switch}>
                 <input
                   type="checkbox"
                   checked={settings?.config.appearance.show_in_dock ?? true}
@@ -374,7 +374,7 @@ export function Settings() {
                 <label style={styles.label}>Launch at Login</label>
                 <p style={styles.description}>Start Trace automatically when you log in.</p>
               </div>
-              <label style={styles.switch}>
+              <label className="settings-switch" style={styles.switch}>
                 <input
                   type="checkbox"
                   checked={settings?.config.appearance.launch_at_login ?? false}
@@ -428,7 +428,7 @@ export function Settings() {
                 <label style={styles.label}>Weekly Digest</label>
                 <p style={styles.description}>Receive a weekly summary notification.</p>
               </div>
-              <label style={styles.switch}>
+              <label className="settings-switch" style={styles.switch}>
                 <input
                   type="checkbox"
                   checked={settings?.config.notifications.weekly_digest_enabled ?? true}
@@ -839,6 +839,7 @@ const styles: Record<string, React.CSSProperties> = {
     outline: 'none',
     cursor: 'pointer',
     minWidth: '200px',
+    WebkitAppearance: 'menulist',
   },
   // Shortcut display
   shortcutDisplay: {

@@ -133,31 +133,52 @@ export function Dashboard() {
 
         {data && !loading && (
           <>
-            {/* Summary Cards */}
-            <div style={styles.summaryGrid}>
-              <div style={styles.summaryCard}>
-                <div style={styles.summaryValue}>{(data.summary.totalHours ?? 0).toFixed(1)}h</div>
-                <div style={styles.summaryLabel}>Total Active Time</div>
+            {/* Empty state for new installs */}
+            {data.summary.totalMinutes === 0 && data.appUsage.length === 0 && (
+              <div style={styles.emptyDashboard}>
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.3, marginBottom: '1rem' }}>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M3 9h18" />
+                  <path d="M9 21V9" />
+                </svg>
+                <h3 style={styles.emptyTitle}>No Activity Yet</h3>
+                <p style={styles.emptyText}>
+                  Trace is running in the background, capturing your activity.
+                  Check back in an hour to see your first summary!
+                </p>
+                <p style={styles.emptyHint}>
+                  Make sure you&apos;ve granted Screen Recording and Accessibility permissions in System Settings.
+                </p>
               </div>
-              <div style={styles.summaryCard}>
-                <div style={styles.summaryValue}>{data.summary.uniqueApps}</div>
-                <div style={styles.summaryLabel}>Apps Used</div>
-              </div>
-              <div style={styles.summaryCard}>
-                <div style={styles.summaryValue}>{data.summary.notesGenerated}</div>
-                <div style={styles.summaryLabel}>Notes Generated</div>
-              </div>
-              <div style={styles.summaryCard}>
-                <div style={styles.summaryValue}>
-                  {data.summary.mostProductiveHour !== null
-                    ? `${data.summary.mostProductiveHour}:00`
-                    : 'N/A'}
-                </div>
-                <div style={styles.summaryLabel}>Peak Hour</div>
-              </div>
-            </div>
+            )}
 
-            <div style={styles.chartsGrid}>
+            {/* Summary Cards */}
+            {(data.summary.totalMinutes > 0 || data.appUsage.length > 0) && (
+            <>
+              <div style={styles.summaryGrid}>
+                <div style={styles.summaryCard}>
+                  <div style={styles.summaryValue}>{(data.summary.totalHours ?? 0).toFixed(1)}h</div>
+                  <div style={styles.summaryLabel}>Total Active Time</div>
+                </div>
+                <div style={styles.summaryCard}>
+                  <div style={styles.summaryValue}>{data.summary.uniqueApps}</div>
+                  <div style={styles.summaryLabel}>Apps Used</div>
+                </div>
+                <div style={styles.summaryCard}>
+                  <div style={styles.summaryValue}>{data.summary.notesGenerated}</div>
+                  <div style={styles.summaryLabel}>Notes Generated</div>
+                </div>
+                <div style={styles.summaryCard}>
+                  <div style={styles.summaryValue}>
+                    {data.summary.mostProductiveHour !== null
+                      ? `${data.summary.mostProductiveHour}:00`
+                      : 'N/A'}
+                  </div>
+                  <div style={styles.summaryLabel}>Peak Hour</div>
+                </div>
+              </div>
+
+              <div style={styles.chartsGrid}>
               {/* App Usage Chart */}
               <div style={styles.chartCard}>
                 <h3 style={styles.chartTitle}>Top Apps</h3>
@@ -273,6 +294,8 @@ export function Dashboard() {
                 </div>
               </div>
             </div>
+            </>
+            )}
           </>
         )}
       </main>
@@ -527,6 +550,37 @@ const styles: Record<string, React.CSSProperties> = {
     width: '10px',
     height: '10px',
     borderRadius: '2px',
+  },
+  emptyDashboard: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+    padding: '3rem',
+    backgroundColor: 'var(--bg-secondary)',
+    borderRadius: '12px',
+    minHeight: '300px',
+  },
+  emptyTitle: {
+    fontSize: '1.25rem',
+    fontWeight: 600,
+    color: 'var(--text)',
+    marginBottom: '0.5rem',
+  },
+  emptyText: {
+    fontSize: '0.9rem',
+    color: 'var(--text-secondary)',
+    maxWidth: '400px',
+    marginBottom: '1rem',
+    lineHeight: 1.5,
+  },
+  emptyHint: {
+    fontSize: '0.8rem',
+    color: 'var(--text-secondary)',
+    opacity: 0.7,
+    maxWidth: '400px',
+    lineHeight: 1.4,
   },
 };
 

@@ -405,9 +405,22 @@ def get_dashboard_data(days_back: int = 7) -> dict:
     Returns:
         Complete dashboard data
     """
+    summary = get_productivity_summary(days_back)
+
+    # Extract summary data without the nested success key
+    summary_data = {
+        "totalMinutes": summary.get("totalMinutes", 0),
+        "totalHours": summary.get("totalHours", 0),
+        "uniqueApps": summary.get("uniqueApps", 0),
+        "notesGenerated": summary.get("notesGenerated", 0),
+        "entitiesExtracted": summary.get("entitiesExtracted", 0),
+        "mostProductiveHour": summary.get("mostProductiveHour"),
+        "daysAnalyzed": summary.get("daysAnalyzed", days_back),
+    }
+
     return {
         "success": True,
-        "summary": get_productivity_summary(days_back),
+        "summary": summary_data,
         "appUsage": get_app_usage(days_back),
         "topicUsage": get_topic_usage(days_back),
         "activityTrend": get_activity_trend(days_back),
