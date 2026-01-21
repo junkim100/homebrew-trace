@@ -39,6 +39,7 @@ def _register_handlers() -> None:
         patterns_handlers,
         permissions_handlers,
         service_handlers,
+        settings_handlers,
         spotlight_handlers,
     )
 
