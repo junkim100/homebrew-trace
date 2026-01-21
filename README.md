@@ -86,45 +86,84 @@ Location             ─┘
 
 ---
 
-## Download
+## Installation
 
-### macOS
+### Option 1: Homebrew (Recommended)
+
+The easiest way to install Trace. Homebrew automatically handles the macOS security restrictions.
+
+```bash
+# Add the tap and install
+brew tap junkim100/trace https://github.com/junkim100/Trace.git --custom-remote
+brew install --cask trace
+```
+
+Or install directly:
+```bash
+brew install --cask junkim100/trace/trace
+```
+
+To update:
+```bash
+brew upgrade --cask trace
+```
+
+### Option 2: Manual Download
 
 1. **Download** the latest `.dmg` from [GitHub Releases](https://github.com/junkim100/Trace/releases):
    - **Apple Silicon** (M1/M2/M3/M4): `Trace-x.x.x-arm64.dmg`
-   - **Intel Macs**: `Trace-x.x.x-x64.dmg`
+   - **Intel Macs**: `Trace-x.x.x.dmg`
 
 2. **Install** - Open the DMG and drag Trace to your Applications folder
 
-3. **First Launch** (important for unsigned apps):
-   - Right-click (or Control-click) on Trace in Applications
-   - Click **"Open"**
-   - Click **"Open"** again in the security dialog
-   - *This is only needed once*
+3. **Remove Quarantine** - Run this command in Terminal:
+   ```bash
+   xattr -cr /Applications/Trace.app
+   ```
+   > **Why is this needed?** macOS marks apps downloaded from the internet as "quarantined". Since Trace isn't signed with an Apple Developer certificate ($99/year), macOS shows a "damaged" error. This command removes that flag.
 
-4. **Grant Permissions** when prompted:
-   - **Screen Recording** - Click "Open System Settings" and enable Trace
-   - **Accessibility** - Enable Trace in Privacy & Security settings
-   - **Location Services** - Optional, enable if you want location in your notes
+4. **Open Trace** from Applications
 
-5. **Configure** - Set your OpenAI API key in the app's Settings
+### After Installation
 
-### Troubleshooting
+1. **Grant Permissions** when prompted:
+   - **Screen Recording** - Required for capturing screenshots
+   - **Accessibility** - Required for detecting active apps/windows
+   - **Location Services** - Optional (note: requires signed app to work)
 
-**"Trace is damaged and can't be opened"**
+2. **Configure** - Open Settings (`Cmd+,`) and set your OpenAI API key
+
+---
+
+## Troubleshooting
+
+### "Trace is damaged and can't be opened"
+
+This happens because the app isn't signed with an Apple Developer certificate. Run:
+
 ```bash
 xattr -cr /Applications/Trace.app
 ```
-Then try opening again.
 
-**Permissions not working**
-1. Quit Trace completely
-2. Go to System Settings → Privacy & Security
-3. Remove Trace from the permission list
+Then open Trace again. If you installed via Homebrew, this is done automatically.
+
+### Permissions not working
+
+1. Quit Trace completely (`Cmd+Q`)
+2. Go to **System Settings → Privacy & Security**
+3. Find and remove Trace from the relevant permission list
 4. Reopen Trace and grant permissions again
 
-**App won't start**
-Check the logs at `~/Library/Application Support/Trace/logs/`
+### App won't start
+
+Check the logs:
+```bash
+cat ~/Library/Application\ Support/Trace/logs/*.log
+```
+
+### Screen Recording permission keeps turning off
+
+After granting Screen Recording permission, you may need to restart Trace for it to take effect.
 
 ---
 
