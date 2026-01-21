@@ -136,7 +136,7 @@ export function Dashboard() {
             {/* Summary Cards */}
             <div style={styles.summaryGrid}>
               <div style={styles.summaryCard}>
-                <div style={styles.summaryValue}>{data.summary.totalHours.toFixed(1)}h</div>
+                <div style={styles.summaryValue}>{(data.summary.totalHours ?? 0).toFixed(1)}h</div>
                 <div style={styles.summaryLabel}>Total Active Time</div>
               </div>
               <div style={styles.summaryCard}>
@@ -174,7 +174,7 @@ export function Dashboard() {
                           }}
                         />
                       </div>
-                      <div style={styles.barValue}>{app.totalMinutes.toFixed(0)}m</div>
+                      <div style={styles.barValue}>{(app.totalMinutes ?? 0).toFixed(0)}m</div>
                     </div>
                   ))}
                 </div>

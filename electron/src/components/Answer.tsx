@@ -96,7 +96,7 @@ export function Answer({ response, loading = false, error = null, onCitationClic
           {Math.round(response.confidence * 100)}% confident
         </span>
         <span style={styles.metaItem}>
-          {response.processing_time_ms.toFixed(0)}ms
+          {(response.processing_time_ms ?? 0).toFixed(0)}ms
         </span>
       </div>
 
