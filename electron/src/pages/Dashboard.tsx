@@ -64,14 +64,38 @@ export function Dashboard() {
       if (result.success) {
         setData(result);
       } else {
-        setError(result.error || 'Failed to load dashboard data');
+        const errorMessage = result.error || 'Failed to load dashboard data';
+        // Check for API key related errors
+        const isApiKeyError =
+          errorMessage.toLowerCase().includes('invalid api key') ||
+          errorMessage.toLowerCase().includes('api key') ||
+          errorMessage.includes('401') ||
+          errorMessage.toLowerCase().includes('authentication') ||
+          errorMessage.toLowerCase().includes('unauthorized');
+        if (isApiKeyError) {
+          navigate('/');
+          return;
+        }
+        setError(errorMessage);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      // Check for API key related errors
+      const isApiKeyError =
+        errorMessage.toLowerCase().includes('invalid api key') ||
+        errorMessage.toLowerCase().includes('api key') ||
+        errorMessage.includes('401') ||
+        errorMessage.toLowerCase().includes('authentication') ||
+        errorMessage.toLowerCase().includes('unauthorized');
+      if (isApiKeyError) {
+        navigate('/');
+        return;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [daysBack]);
+  }, [daysBack, navigate]);
 
   useEffect(() => {
     fetchData();
@@ -84,7 +108,7 @@ export function Dashboard() {
     return `rgba(0, 212, 255, ${alpha})`;
   };
 
-  const maxHeatmapValue = data?.activityHeatmap
+  const maxHeatmapValue = data?.activityHeatmap && data.activityHeatmap.length > 0
     ? Math.max(...data.activityHeatmap.map((c) => c.activityCount))
     : 0;
 
@@ -222,36 +246,39 @@ export function Dashboard() {
               <div style={styles.chartCard}>
                 <h3 style={styles.chartTitle}>Activity Trend</h3>
                 <div style={styles.trendChart}>
-                  {data.activityTrend.length > 0 ? (
-                    <svg viewBox={`0 0 ${data.activityTrend.length * 20} 100`} style={styles.trendSvg}>
-                      {/* Line */}
-                      <polyline
-                        fill="none"
-                        stroke="var(--accent)"
-                        strokeWidth="2"
-                        points={data.activityTrend
-                          .map((point, idx) => {
-                            const maxEvents = Math.max(...data.activityTrend.map((p) => p.eventCount));
-                            const y = 90 - (point.eventCount / Math.max(maxEvents, 1)) * 80;
-                            return `${idx * 20 + 10},${y}`;
-                          })
-                          .join(' ')}
-                      />
-                      {/* Points */}
-                      {data.activityTrend.map((point, idx) => {
-                        const maxEvents = Math.max(...data.activityTrend.map((p) => p.eventCount));
-                        const y = 90 - (point.eventCount / Math.max(maxEvents, 1)) * 80;
-                        return (
-                          <circle
-                            key={point.date}
-                            cx={idx * 20 + 10}
-                            cy={y}
-                            r="3"
-                            fill="var(--accent)"
+                  {data.activityTrend && data.activityTrend.length > 0 ? (
+                    (() => {
+                      const maxEvents = Math.max(1, ...data.activityTrend.map((p) => p.eventCount ?? 0));
+                      return (
+                        <svg viewBox={`0 0 ${data.activityTrend.length * 20} 100`} style={styles.trendSvg}>
+                          {/* Line */}
+                          <polyline
+                            fill="none"
+                            stroke="var(--accent)"
+                            strokeWidth="2"
+                            points={data.activityTrend
+                              .map((point, idx) => {
+                                const y = 90 - ((point.eventCount ?? 0) / maxEvents) * 80;
+                                return `${idx * 20 + 10},${y}`;
+                              })
+                              .join(' ')}
                           />
-                        );
-                      })}
-                    </svg>
+                          {/* Points */}
+                          {data.activityTrend.map((point, idx) => {
+                            const y = 90 - ((point.eventCount ?? 0) / maxEvents) * 80;
+                            return (
+                              <circle
+                                key={point.date}
+                                cx={idx * 20 + 10}
+                                cy={y}
+                                r="3"
+                                fill="var(--accent)"
+                              />
+                            );
+                          })}
+                        </svg>
+                      );
+                    })()
                   ) : (
                     <div style={styles.emptyState}>No activity data</div>
                   )}

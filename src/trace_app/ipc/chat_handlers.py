@@ -188,60 +188,7 @@ def handle_list_notes(params: dict[str, Any]) -> dict[str, Any]:
     return {"notes": notes}
 
 
-@handler("settings.get")
-def handle_get_settings(params: dict[str, Any]) -> dict[str, Any]:
-    """Get current application settings.
-
-    Returns:
-        Settings dict with api_key status, data directory paths, etc.
-    """
-    import os
-
-    from src.core.paths import CACHE_DIR, DATA_ROOT, DB_PATH, NOTES_DIR
-
-    return {
-        "data_dir": str(DATA_ROOT),
-        "notes_dir": str(NOTES_DIR),
-        "db_path": str(DB_PATH),
-        "cache_dir": str(CACHE_DIR),
-        "has_api_key": bool(os.environ.get("OPENAI_API_KEY")),
-    }
-
-
-@handler("settings.set_api_key")
-def handle_set_api_key(params: dict[str, Any]) -> dict[str, Any]:
-    """Set the OpenAI API key.
-
-    Params:
-        api_key: The API key to set
-
-    Returns:
-        {"success": bool}
-    """
-    import os
-    import re
-
-    api_key = params.get("api_key")
-    if not api_key:
-        raise ValueError("api_key parameter is required")
-
-    # Validate API key format (OpenAI keys start with sk- and are alphanumeric)
-    # This prevents injection of malicious values
-    if not isinstance(api_key, str):
-        raise ValueError("api_key must be a string")
-
-    api_key = api_key.strip()
-
-    # OpenAI API keys follow the pattern: sk-[alphanumeric, 48+ chars]
-    # or sk-proj-[alphanumeric] for project keys
-    if not re.match(r"^sk-(?:proj-)?[A-Za-z0-9_-]{20,}$", api_key):
-        raise ValueError("Invalid API key format")
-
-    # Set in environment for current process
-    os.environ["OPENAI_API_KEY"] = api_key
-
-    # Reset chat API to use new key
+def reset_chat_api():
+    """Reset the chat API instance (called when API key changes)."""
     global _chat_api
     _chat_api = None
-
-    return {"success": True}

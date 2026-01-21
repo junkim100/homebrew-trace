@@ -217,6 +217,10 @@ contextBridge.exposeInMainWorld('traceAPI', {
     setApiKey: (apiKey) =>
       ipcRenderer.invoke('python:call', 'settings.set_api_key', { api_key: apiKey }),
 
+    // Validate API key (tests against OpenAI API)
+    validateApiKey: (apiKey) =>
+      ipcRenderer.invoke('python:call', 'settings.validate_api_key', { api_key: apiKey }),
+
     // Appearance settings (dock visibility, launch at login)
     getAppearance: () => ipcRenderer.invoke('python:call', 'settings.get_appearance', {}),
     setAppearance: (settings) =>

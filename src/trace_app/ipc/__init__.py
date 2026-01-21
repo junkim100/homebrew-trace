@@ -1,8 +1,18 @@
 """IPC module for Python-Electron communication."""
 
 # Import handlers to register them
+import src.trace_app.ipc.blocklist_handlers  # noqa: F401
 import src.trace_app.ipc.chat_handlers  # noqa: F401
+import src.trace_app.ipc.dashboard_handlers  # noqa: F401
+import src.trace_app.ipc.digest_handlers  # noqa: F401
+import src.trace_app.ipc.export_handlers  # noqa: F401
+import src.trace_app.ipc.graph_handlers  # noqa: F401
+import src.trace_app.ipc.open_loops_handlers  # noqa: F401
+import src.trace_app.ipc.patterns_handlers  # noqa: F401
 import src.trace_app.ipc.permissions_handlers  # noqa: F401
+import src.trace_app.ipc.service_handlers  # noqa: F401
+import src.trace_app.ipc.settings_handlers  # noqa: F401
+import src.trace_app.ipc.spotlight_handlers  # noqa: F401
 from src.trace_app.ipc.models import BackendStatus, IPCMethod, IPCRequest, IPCResponse
 from src.trace_app.ipc.server import handler, run_server
 

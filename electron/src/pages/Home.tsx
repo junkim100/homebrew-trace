@@ -1,31 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { BackendStatus, AllPermissionsState } from '../types/trace-api';
+import type { BackendStatus } from '../types/trace-api';
+
+type SetupStep = 'loading' | 'api_key' | 'permissions' | 'ready';
 
 function Home() {
   const navigate = useNavigate();
-  const [electronIpc, setElectronIpc] = useState<string>('Testing...');
+  const [step, setStep] = useState<SetupStep>('loading');
   const [pythonReady, setPythonReady] = useState<boolean>(false);
-  const [pythonPing, setPythonPing] = useState<string>('Waiting...');
   const [backendStatus, setBackendStatus] = useState<BackendStatus | null>(null);
-  const [permissionsState, setPermissionsState] = useState<AllPermissionsState | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // API Key form state
+  const [apiKey, setApiKey] = useState<string>('');
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  const [validating, setValidating] = useState<boolean>(false);
 
   useEffect(() => {
     if (!window.traceAPI) {
-      setElectronIpc('Not running in Electron');
+      setError('Not running in Electron');
       return;
     }
-
-    // Test Electron IPC
-    window.traceAPI
-      .ping()
-      .then((response) => {
-        setElectronIpc(`OK: ${response}`);
-      })
-      .catch((err) => {
-        setElectronIpc(`Error: ${err.message}`);
-      });
 
     // Poll for Python backend readiness
     const checkPython = async () => {
@@ -34,23 +29,25 @@ function Home() {
         setPythonReady(ready);
 
         if (ready) {
-          // Test Python ping
-          const pingResult = await window.traceAPI.python.ping();
-          setPythonPing(`OK: ${pingResult}`);
-
           // Get backend status
           const status = await window.traceAPI.python.getStatus();
           setBackendStatus(status);
 
-          // Check permissions
-          const permissions = await window.traceAPI.permissions.checkAll();
-          setPermissionsState(permissions);
+          // Check if API key is set
+          const settings = await window.traceAPI.settings.get();
 
-          // Redirect to permissions page if not all granted
+          if (!settings.has_api_key) {
+            setStep('api_key');
+            return;
+          }
+
+          // API key exists, check permissions
+          const permissions = await window.traceAPI.permissions.checkAll();
+
           if (!permissions.all_granted) {
             navigate('/permissions');
           } else {
-            // Permissions granted - go to chat
+            // All good - go to chat
             navigate('/chat');
           }
         }
@@ -70,6 +67,133 @@ function Home() {
     return () => clearInterval(interval);
   }, [pythonReady, navigate]);
 
+  const handleApiKeySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApiKeyError(null);
+    setValidating(true);
+
+    try {
+      // Validate the API key
+      const validation = await window.traceAPI.settings.validateApiKey(apiKey);
+
+      if (!validation.valid) {
+        setApiKeyError(validation.error || 'Invalid API key');
+        setValidating(false);
+        return;
+      }
+
+      // Save the API key
+      const saveResult = await window.traceAPI.settings.setApiKey(apiKey);
+
+      if (!saveResult.success) {
+        setApiKeyError('Failed to save API key');
+        setValidating(false);
+        return;
+      }
+
+      // Check permissions next
+      const permissions = await window.traceAPI.permissions.checkAll();
+
+      if (!permissions.all_granted) {
+        navigate('/permissions');
+      } else {
+        navigate('/chat');
+      }
+    } catch (err) {
+      setApiKeyError(err instanceof Error ? err.message : 'Failed to validate API key');
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  // Loading state
+  if (!pythonReady) {
+    return (
+      <div style={styles.container}>
+        <div className="titlebar" />
+        <main style={styles.main}>
+          <h1 style={styles.logoText}>TRACE</h1>
+          <p style={styles.subtitle}>
+            Your digital activity, organized and searchable.
+          </p>
+          <div style={styles.loadingContainer}>
+            <div style={styles.spinner} />
+            <p style={styles.loadingText}>Starting backend...</p>
+          </div>
+          {error && (
+            <div style={styles.errorCard}>
+              <p style={styles.errorText}>{error}</p>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  // API Key entry
+  if (step === 'api_key') {
+    return (
+      <div style={styles.container}>
+        <div className="titlebar" />
+        <main style={styles.main}>
+          <h1 style={styles.logoText}>TRACE</h1>
+          <p style={styles.subtitle}>
+            Your digital activity, organized and searchable.
+          </p>
+
+          <div style={styles.apiKeyCard}>
+            <h2 style={styles.apiKeyTitle}>OpenAI API Key Required</h2>
+            <p style={styles.apiKeyDescription}>
+              Trace uses OpenAI&apos;s API to analyze your activity and generate summaries.
+              Your API key is stored locally and never shared.
+            </p>
+
+            <form onSubmit={handleApiKeySubmit} style={styles.apiKeyForm}>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="sk-..."
+                style={styles.apiKeyInput}
+                disabled={validating}
+                autoFocus
+              />
+
+              {apiKeyError && (
+                <p style={styles.apiKeyError}>{apiKeyError}</p>
+              )}
+
+              <button
+                type="submit"
+                style={styles.apiKeyButton}
+                disabled={validating || !apiKey.trim()}
+              >
+                {validating ? 'Validating...' : 'Continue'}
+              </button>
+            </form>
+
+            <p style={styles.apiKeyHelp}>
+              Don&apos;t have an API key?{' '}
+              <a
+                href="https://platform.openai.com/api-keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={styles.apiKeyLink}
+              >
+                Get one from OpenAI
+              </a>
+            </p>
+          </div>
+
+          {backendStatus && (
+            <p style={styles.versionText}>v{backendStatus.version}</p>
+          )}
+        </main>
+      </div>
+    );
+  }
+
+  // Default/loading permissions
   return (
     <div style={styles.container}>
       <div className="titlebar" />
@@ -78,69 +202,10 @@ function Home() {
         <p style={styles.subtitle}>
           Your digital activity, organized and searchable.
         </p>
-
-        <div style={styles.statusGrid}>
-          <div style={styles.statusCard}>
-            <h3 style={styles.cardTitle}>Electron IPC</h3>
-            <p style={styles.statusValue}>{electronIpc}</p>
-            <p style={styles.statusLabel}>
-              Platform: {window.traceAPI?.platform || 'Browser'}
-            </p>
-          </div>
-
-          <div style={styles.statusCard}>
-            <h3 style={styles.cardTitle}>Python Backend</h3>
-            <p style={{ ...styles.statusValue, color: pythonReady ? '#00d4ff' : '#ff6b6b' }}>
-              {pythonReady ? 'Connected' : 'Connecting...'}
-            </p>
-            <p style={styles.statusLabel}>Ping: {pythonPing}</p>
-          </div>
-
-          {backendStatus && (
-            <div style={styles.statusCard}>
-              <h3 style={styles.cardTitle}>Backend Info</h3>
-              <p style={styles.statusValue}>v{backendStatus.version}</p>
-              <p style={styles.statusLabel}>
-                Python {backendStatus.python_version}
-              </p>
-              <p style={styles.statusLabel}>
-                Uptime: {Math.floor(backendStatus.uptime_seconds)}s
-              </p>
-            </div>
-          )}
-
-          {permissionsState && (
-            <div style={styles.statusCard}>
-              <h3 style={styles.cardTitle}>Permissions</h3>
-              <p style={{ ...styles.statusValue, color: permissionsState.all_granted ? '#34c759' : '#ff9500' }}>
-                {permissionsState.all_granted ? 'All Granted' : 'Setup Required'}
-              </p>
-              <p style={styles.statusLabel}>
-                Screen: {permissionsState.screen_recording.status}
-              </p>
-              <p style={styles.statusLabel}>
-                Accessibility: {permissionsState.accessibility.status}
-              </p>
-              <p style={styles.statusLabel}>
-                Location: {permissionsState.location.status}
-              </p>
-              {!permissionsState.all_granted && (
-                <button
-                  style={styles.setupButton}
-                  onClick={() => navigate('/permissions')}
-                >
-                  Setup Permissions
-                </button>
-              )}
-            </div>
-          )}
+        <div style={styles.loadingContainer}>
+          <div style={styles.spinner} />
+          <p style={styles.loadingText}>Checking setup...</p>
         </div>
-
-        {error && (
-          <div style={styles.errorCard}>
-            <p style={styles.errorText}>{error}</p>
-          </div>
-        )}
       </main>
     </div>
   );
@@ -151,6 +216,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
+    minHeight: '100vh',
   },
   main: {
     flex: 1,
@@ -175,34 +241,23 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#a0a0a0',
     marginBottom: '2rem',
   },
-  statusGrid: {
+  loadingContainer: {
     display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
     gap: '1rem',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
   },
-  statusCard: {
-    background: '#2a2a2a',
-    borderRadius: '12px',
-    padding: '1.5rem',
-    border: '1px solid #3a3a3a',
-    minWidth: '200px',
+  spinner: {
+    width: '32px',
+    height: '32px',
+    border: '3px solid var(--border)',
+    borderTopColor: 'var(--accent)',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
   },
-  cardTitle: {
-    fontSize: '0.875rem',
+  loadingText: {
     color: '#707070',
-    marginBottom: '0.5rem',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
-  statusValue: {
-    fontSize: '1.25rem',
-    color: '#00d4ff',
-    marginBottom: '0.5rem',
-  },
-  statusLabel: {
-    fontSize: '0.875rem',
-    color: '#707070',
+    fontSize: '0.9rem',
   },
   errorCard: {
     background: '#3a2020',
@@ -215,17 +270,72 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#ff6b6b',
     fontSize: '0.875rem',
   },
-  setupButton: {
+  apiKeyCard: {
+    background: '#2a2a2a',
+    borderRadius: '16px',
+    padding: '2rem',
+    border: '1px solid #3a3a3a',
+    maxWidth: '400px',
+    width: '100%',
+    textAlign: 'center',
+  },
+  apiKeyTitle: {
+    fontSize: '1.25rem',
+    fontWeight: 600,
+    color: '#ffffff',
+    marginBottom: '0.75rem',
+  },
+  apiKeyDescription: {
+    fontSize: '0.9rem',
+    color: '#a0a0a0',
+    marginBottom: '1.5rem',
+    lineHeight: 1.5,
+  },
+  apiKeyForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+  },
+  apiKeyInput: {
+    backgroundColor: '#1a1a1a',
+    border: '1px solid #3a3a3a',
+    borderRadius: '8px',
+    padding: '0.75rem 1rem',
+    fontSize: '1rem',
+    color: '#ffffff',
+    outline: 'none',
+    fontFamily: 'monospace',
+  },
+  apiKeyError: {
+    color: '#ff6b6b',
+    fontSize: '0.85rem',
+    textAlign: 'left',
+    margin: 0,
+  },
+  apiKeyButton: {
     backgroundColor: '#007aff',
-    color: '#fff',
+    color: '#ffffff',
     border: 'none',
     borderRadius: '8px',
-    padding: '0.5rem 1rem',
-    fontSize: '0.75rem',
+    padding: '0.75rem 1.5rem',
+    fontSize: '1rem',
     fontWeight: 500,
     cursor: 'pointer',
-    marginTop: '0.5rem',
-    width: '100%',
+    transition: 'background-color 0.2s',
+  },
+  apiKeyHelp: {
+    fontSize: '0.85rem',
+    color: '#707070',
+    marginTop: '1.5rem',
+  },
+  apiKeyLink: {
+    color: '#00d4ff',
+    textDecoration: 'none',
+  },
+  versionText: {
+    fontSize: '0.8rem',
+    color: '#505050',
+    marginTop: '2rem',
   },
 };
 

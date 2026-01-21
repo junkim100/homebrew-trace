@@ -539,14 +539,25 @@ function createAppMenu() {
 
 // Open settings page
 function openSettings() {
+  const sendSettingsEvent = () => {
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('tray:openSettings');
+    }
+  };
+
   if (mainWindow) {
     mainWindow.show();
     mainWindow.focus();
+    // Small delay to ensure React app is mounted and listening
+    setTimeout(sendSettingsEvent, 100);
   } else {
     createWindow();
-  }
-  if (mainWindow && mainWindow.webContents) {
-    mainWindow.webContents.send('tray:openSettings');
+    // Wait for window to finish loading before sending event
+    if (mainWindow) {
+      mainWindow.webContents.once('did-finish-load', () => {
+        setTimeout(sendSettingsEvent, 100);
+      });
+    }
   }
 }
 

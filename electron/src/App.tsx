@@ -1,4 +1,5 @@
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { HashRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import Home from './pages/Home';
 import Chat from './pages/Chat';
@@ -7,10 +8,35 @@ import Permissions from './pages/permissions';
 import Graph from './pages/Graph';
 import Dashboard from './pages/Dashboard';
 
+// Component to handle tray navigation events
+function TrayNavigationHandler() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Listen for open settings from tray or Cmd+,
+    const unsubscribeSettings = window.traceAPI.tray.onOpenSettings(() => {
+      navigate('/settings');
+    });
+
+    // Listen for open graph from tray
+    const unsubscribeGraph = window.traceAPI.tray.onOpenGraph(() => {
+      navigate('/graph');
+    });
+
+    return () => {
+      unsubscribeSettings();
+      unsubscribeGraph();
+    };
+  }, [navigate]);
+
+  return null;
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <HashRouter>
+        <TrayNavigationHandler />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/chat" element={<Chat />} />

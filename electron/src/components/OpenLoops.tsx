@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { OpenLoop } from '../types/trace-api';
 
 interface OpenLoopsProps {
@@ -16,7 +16,7 @@ export function OpenLoops({ onViewNote, maxItems = 10, compact = false }: OpenLo
   const [error, setError] = useState<string | null>(null);
   const [daysBack, setDaysBack] = useState(7);
 
-  const loadLoops = async () => {
+  const loadLoops = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -34,11 +34,11 @@ export function OpenLoops({ onViewNote, maxItems = 10, compact = false }: OpenLo
     } finally {
       setLoading(false);
     }
-  };
+  }, [daysBack, maxItems]);
 
   useEffect(() => {
     loadLoops();
-  }, [daysBack, maxItems]);
+  }, [loadLoops]);
 
   const formatDate = (isoString: string) => {
     const date = new Date(isoString);

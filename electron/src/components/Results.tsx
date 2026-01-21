@@ -42,7 +42,7 @@ export function Results({ notes, onNoteClick, loading = false }: ResultsProps) {
             <div style={styles.noteHeader}>
               <span style={styles.noteTitle}>{note.title || note.note_id}</span>
               <span style={styles.noteScore}>
-                {Math.round(note.similarity * 100)}% match
+                {Math.round((note.similarity ?? 0) * 100)}% match
               </span>
             </div>
             <p style={styles.noteSummary}>{note.summary}</p>

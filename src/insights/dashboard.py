@@ -333,7 +333,8 @@ def get_productivity_summary(days_back: int = 7) -> dict:
             """,
             (start_ts,),
         )
-        unique_apps = cursor.fetchone()[0] or 0
+        row = cursor.fetchone()
+        unique_apps = row[0] if row else 0
 
         # Notes generated
         cursor = conn.execute(
@@ -344,7 +345,8 @@ def get_productivity_summary(days_back: int = 7) -> dict:
             """,
             (start_ts,),
         )
-        notes_count = cursor.fetchone()[0] or 0
+        row = cursor.fetchone()
+        notes_count = row[0] if row else 0
 
         # Entities extracted
         cursor = conn.execute(
@@ -356,7 +358,8 @@ def get_productivity_summary(days_back: int = 7) -> dict:
             """,
             (start_ts,),
         )
-        entities_count = cursor.fetchone()[0] or 0
+        row = cursor.fetchone()
+        entities_count = row[0] if row else 0
 
         # Most productive hour (by activity count)
         cursor = conn.execute(

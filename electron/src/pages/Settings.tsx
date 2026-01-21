@@ -1,35 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { AppSettings, BlocklistEntry } from '../types/trace-api';
-
-interface AllSettings {
-  config: {
-    appearance: { show_in_dock: boolean; launch_at_login: boolean };
-    capture: {
-      summarization_interval_minutes: number;
-      daily_revision_hour: number;
-      blocked_apps: string[];
-      blocked_domains: string[];
-    };
-    notifications: { weekly_digest_enabled: boolean; weekly_digest_day: string };
-    shortcuts: { open_trace: string };
-    data: { retention_months: number | null };
-    api_key: string | null;
-  };
-  options: {
-    summarization_intervals: number[];
-    daily_revision_hours: number[];
-    weekly_digest_days: string[];
-    retention_months: (number | null)[];
-  };
-  has_api_key: boolean;
-  paths: {
-    data_dir: string;
-    notes_dir: string;
-    db_path: string;
-    cache_dir: string;
-  };
-}
+import type { AllSettings, AppSettings, BlocklistEntry } from '../types/trace-api';
 
 export function Settings() {
   const navigate = useNavigate();
@@ -74,7 +45,7 @@ export function Settings() {
     const loadSettings = async () => {
       try {
         const result = await window.traceAPI.settings.getAll();
-        setSettings(result as AllSettings);
+        setSettings(result);
       } catch (err) {
         console.error('Failed to load all settings:', err);
         // Fallback to legacy get
@@ -149,7 +120,7 @@ export function Settings() {
       setApiKey('');
       // Refresh settings
       const result = await window.traceAPI.settings.getAll();
-      setSettings(result as AllSettings);
+      setSettings(result);
     } catch (err) {
       setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Failed to save API key' });
     } finally {

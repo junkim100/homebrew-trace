@@ -195,6 +195,10 @@ def handle_set_api_key(params: dict[str, Any]) -> dict[str, Any]:
 
     try:
         success = set_api_key(api_key)
+        # Reset chat API to use new key
+        from src.trace_app.ipc.chat_handlers import reset_chat_api
+
+        reset_chat_api()
         return {"success": success}
     except ValueError as e:
         raise ValueError(str(e)) from e
@@ -410,3 +414,62 @@ def handle_reset_settings(params: dict[str, Any]) -> dict[str, Any]:
 
     success = reset_to_defaults()
     return {"success": success}
+
+
+@handler("settings.validate_api_key")
+def handle_validate_api_key(params: dict[str, Any]) -> dict[str, Any]:
+    """Validate an OpenAI API key by making a test API call.
+
+    Params:
+        api_key: The API key to validate (optional, uses stored key if not provided)
+
+    Returns:
+        {"valid": bool, "error": str | None}
+    """
+    import httpx
+
+    api_key = params.get("api_key")
+
+    # If no key provided, use stored key
+    if not api_key:
+        api_key = get_api_key()
+
+    if not api_key:
+        return {"valid": False, "error": "No API key provided"}
+
+    # Basic format validation
+    if not api_key.startswith("sk-"):
+        return {"valid": False, "error": "Invalid API key format. Key should start with 'sk-'"}
+
+    # Test the API key with a minimal API call (list models)
+    try:
+        response = httpx.get(
+            "https://api.openai.com/v1/models",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+            },
+            timeout=10.0,
+        )
+
+        if response.status_code == 200:
+            return {"valid": True, "error": None}
+        elif response.status_code == 401:
+            return {
+                "valid": False,
+                "error": "Invalid API key. Please check your key and try again.",
+            }
+        elif response.status_code == 429:
+            return {"valid": False, "error": "Rate limited. Please try again later."}
+        else:
+            return {"valid": False, "error": f"API error: {response.status_code}"}
+
+    except httpx.TimeoutException:
+        return {
+            "valid": False,
+            "error": "Connection timeout. Please check your internet connection.",
+        }
+    except httpx.RequestError as e:
+        return {"valid": False, "error": f"Connection error: {str(e)}"}
+    except Exception as e:
+        logger.exception("Failed to validate API key")
+        return {"valid": False, "error": f"Validation failed: {str(e)}"}

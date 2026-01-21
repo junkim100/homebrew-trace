@@ -312,13 +312,70 @@ export interface AppSettings {
   has_api_key: boolean;
 }
 
+/** All settings with full configuration and metadata */
+export interface AllSettings {
+  config: {
+    appearance: { show_in_dock: boolean; launch_at_login: boolean };
+    capture: {
+      summarization_interval_minutes: number;
+      daily_revision_hour: number;
+      blocked_apps: string[];
+      blocked_domains: string[];
+    };
+    notifications: { weekly_digest_enabled: boolean; weekly_digest_day: string };
+    shortcuts: { open_trace: string };
+    data: { retention_months: number | null };
+    api_key: string | null;
+  };
+  options: {
+    summarization_intervals: number[];
+    daily_revision_hours: number[];
+    weekly_digest_days: string[];
+    retention_months: (number | null)[];
+  };
+  has_api_key: boolean;
+  paths: {
+    data_dir: string;
+    notes_dir: string;
+    db_path: string;
+    cache_dir: string;
+  };
+}
+
 /** Settings API methods */
 export interface SettingsAPI {
   /** Get current settings */
   get(): Promise<AppSettings>;
 
+  /** Get all settings with metadata */
+  getAll(): Promise<AllSettings>;
+
+  /** Set a single setting value by key path */
+  setValue(key: string, value: unknown): Promise<{ success: boolean }>;
+
   /** Set API key */
   setApiKey(apiKey: string): Promise<{ success: boolean }>;
+
+  /** Validate API key against OpenAI API */
+  validateApiKey(apiKey?: string): Promise<{ valid: boolean; error: string | null }>;
+}
+
+/** Appearance settings */
+export interface AppearanceSettings {
+  showInDock: boolean;
+  launchAtLogin: boolean;
+}
+
+/** Appearance API methods */
+export interface AppearanceAPI {
+  /** Get current appearance settings */
+  get(): Promise<AppearanceSettings>;
+
+  /** Set dock visibility (macOS) */
+  setDockVisibility(showInDock: boolean): Promise<void>;
+
+  /** Set launch at login */
+  setLaunchAtLogin(launchAtLogin: boolean): Promise<void>;
 }
 
 /** Window control methods */
@@ -786,6 +843,9 @@ export interface TraceAPI {
 
   /** Blocklist API */
   blocklist: BlocklistAPI;
+
+  /** Appearance API */
+  appearance: AppearanceAPI;
 
   /** Window control */
   window: WindowAPI;
