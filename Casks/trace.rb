@@ -2,15 +2,15 @@
 # A second brain built from your digital activity
 
 cask "trace" do
-  version "0.4.2"
+  version "0.4.3"
 
   on_arm do
-    sha256 "44003716c239e41c9a620d57940873619b8445b7de87aa218678a4a1aa11516f"
+    sha256 "5a1e10570e257bc95849c113367f5bbc872e37faf34f8b988f90c12aa354475c"
     url "https://github.com/junkim100/Trace/releases/download/v#{version}/Trace-#{version}-arm64.dmg"
   end
 
   on_intel do
-    sha256 "6797f030e1a5a951146d469525ce6a12fbf28b084db910468f61909d8ce54543"
+    sha256 "c78cf2e183169721e0e7065a0637fd276275ebd802454bf27d1a360e7ace3a5d"
     url "https://github.com/junkim100/Trace/releases/download/v#{version}/Trace-#{version}.dmg"
   end
 
