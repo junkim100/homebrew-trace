@@ -10,7 +10,7 @@ cask "trace" do
   end
 
   on_intel do
-    sha256 "f56b0751524fa6d9c1943b143bb4c44579d5e77d0c762e2111334316f391ccc0"
+    sha256 "395888b02adc4e62e6d37f8b685daf5f4e70ed2b916a2a4a23ca6d25cccaa8d4"
     url "https://github.com/junkim100/Trace/releases/download/v#{version}/Trace-#{version}.dmg"
   end
 
